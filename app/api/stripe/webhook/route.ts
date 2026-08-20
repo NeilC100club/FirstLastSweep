@@ -10,10 +10,24 @@ export async function POST(request: Request) {
   const body = await request.text();
   const signature = request.headers.get("stripe-signature");
 
-  let event: Stripe.Event;
-  try {
-    event = stripe.webhooks.constructEvent(body, signature!, process.env.STRIPE_WEBHOOK_SECRET!);
-  } catch (err) {
+  // We have two separate Stripe destinations pointing at this same URL (one for
+  // "Your account" events like checkout.session.completed, one for "Connected accounts"
+  // events like account.updated) — each has its own signing secret, so try both.
+  const possibleSecrets = [
+    process.env.STRIPE_WEBHOOK_SECRET,
+    process.env.STRIPE_WEBHOOK_SECRET_CONNECT,
+  ].filter(Boolean) as string[];
+
+  let event: Stripe.Event | null = null;
+  for (const secret of possibleSecrets) {
+    try {
+      event = stripe.webhooks.constructEvent(body, signature!, secret);
+      break;
+    } catch {
+      // try the next secret
+    }
+  }
+  if (!event) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
