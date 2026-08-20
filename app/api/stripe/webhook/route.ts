@@ -36,11 +36,12 @@ export async function POST(request: Request) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const { sweepId, minutes, ownerName, ownerId } = session.metadata || {};
+    console.log("Webhook: checkout.session.completed", { sweepId, minutes, ownerName, ownerId });
     if (sweepId && minutes) {
       const minuteNumbers = minutes.split(",").map(Number);
       // Only claims minutes that are still unowned — if two people somehow both got this
       // far, the unique constraint plus this guard means only the first write wins.
-      await supabase
+      const { data, error } = await supabase
         .from("minutes")
         .update({
           owner_name: ownerName,
@@ -50,17 +51,34 @@ export async function POST(request: Request) {
         })
         .eq("sweep_id", sweepId)
         .in("minute", minuteNumbers)
-        .is("owner_name", null);
+        .is("owner_name", null)
+        .select();
+
+      if (error) {
+        console.error("Webhook: failed to update minutes", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      console.log("Webhook: updated rows", data?.length ?? 0);
+    } else {
+      console.error("Webhook: missing sweepId or minutes in session metadata");
     }
   }
 
   if (event.type === "account.updated") {
     const account = event.data.object as Stripe.Account;
+    console.log("Webhook: account.updated", { id: account.id, charges_enabled: account.charges_enabled });
     if (account.charges_enabled) {
-      await supabase
+      const { data, error } = await supabase
         .from("profiles")
         .update({ stripe_onboarded: true })
-        .eq("stripe_account_id", account.id);
+        .eq("stripe_account_id", account.id)
+        .select();
+
+      if (error) {
+        console.error("Webhook: failed to update profile", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      console.log("Webhook: updated profiles", data?.length ?? 0);
     }
   }
 
