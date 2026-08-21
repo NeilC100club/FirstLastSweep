@@ -37,18 +37,25 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
           ← All sweeps
         </a>
 
-        <div className="flex justify-between items-start flex-wrap gap-5 mb-5">
-          <div>
-            <h1 className="font-display text-2xl mb-1">{sweep.name}</h1>
-            <div className="text-sm text-white/60">
-              {sweep.event_date} {sweep.kickoff_time ? `· ${sweep.kickoff_time.slice(0, 5)} kickoff` : ""} ·
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-4 mb-5">
+          <div className="min-w-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="First and Last" className="h-12 w-auto mb-2" />
+            <h1 className="font-display text-2xl sm:text-3xl mb-2 leading-tight">{sweep.name}</h1>
+            <div className="text-sm text-white/60 leading-relaxed">
+              {sweep.event_date}
+              {sweep.kickoff_time ? ` · ${sweep.kickoff_time.slice(0, 5)} kickoff` : ""}
+              <br className="sm:hidden" />
+              <span className="hidden sm:inline"> · </span>
               Organised by {organizerProfile?.name} · £{(sweep.price_per_minute / 100).toFixed(2)} per
               minute
             </div>
           </div>
-          <div className="text-right bg-gold/10 border border-gold/30 rounded-xl px-5 py-3 min-w-[140px]">
-            <div className="font-mono text-[11px] text-white/60 tracking-wide">Prize pool</div>
-            <div className="font-display text-3xl text-gold">£{prizePool.toFixed(2)}</div>
+          <div className="w-full sm:w-auto text-left sm:text-right bg-gold/10 border border-gold/30 rounded-xl px-5 py-3.5 sm:min-w-[150px] flex sm:block justify-between items-center">
+            <div>
+              <div className="font-mono text-[11px] text-white/60 tracking-wide">Prize pool</div>
+              <div className="font-display text-3xl text-gold leading-tight">£{prizePool.toFixed(2)}</div>
+            </div>
             <div className="text-xs text-white/50">
               {claimedCount} / {sweep.total_minutes} claimed
             </div>

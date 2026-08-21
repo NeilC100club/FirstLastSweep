@@ -30,10 +30,12 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-5">
       <div className="w-full max-w-md bg-pitch border border-white/10 rounded-2xl p-8">
-        <div className="text-mono text-xs tracking-widest text-gold font-bold mb-2">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.png" alt="First and Last" className="h-20 w-auto mx-auto mb-4" />
+        <div className="font-mono text-xs tracking-widest text-gold font-bold mb-2 text-center">
           NEWPORT COUNTY 100 CLUB FUNDRAISING SWEEP
         </div>
-        <h1 className="font-display text-3xl mb-6">Welcome back.</h1>
+        <h1 className="font-display text-3xl mb-6 text-center">Welcome back.</h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

@@ -76,8 +76,8 @@ export default function MinuteBoard({
 
   return (
     <div>
-      <div className="bg-pitch border border-white/10 rounded-2xl p-5">
-        <div className="grid grid-cols-9 gap-1.5">
+      <div className="bg-pitch border border-white/10 rounded-2xl p-3 sm:p-5">
+        <div className="grid grid-cols-6 sm:grid-cols-9 gap-1.5 sm:gap-2">
           {minutes.map((m) => {
             const isMine = m.owner_id === currentUserId;
             const isSelected = selected.includes(m.minute);
@@ -86,7 +86,7 @@ export default function MinuteBoard({
               (m.minute === sweep.goal_minute_first || m.minute === sweep.goal_minute_last);
             const clickable = !m.owner_name && sweep.status === "open";
 
-            let bg = "bg-white/5";
+            let bg = "bg-white/5 hover:bg-white/10";
             let textColor = "text-chalk";
             if (isWinner) {
               bg = "bg-red";
@@ -98,7 +98,7 @@ export default function MinuteBoard({
               bg = "bg-[#274A3B]";
               textColor = "text-chalk/90";
             } else if (isSelected) {
-              bg = "bg-gold/25";
+              bg = "bg-gold/25 hover:bg-gold/30";
             }
 
             return (
@@ -107,18 +107,18 @@ export default function MinuteBoard({
                 onClick={() => toggle(m.minute, m.owner_name)}
                 disabled={!clickable}
                 title={m.owner_name ? `Claimed by ${m.owner_name}` : "Available"}
-                className={`aspect-[0.85] rounded-md border ${
+                className={`aspect-[0.85] rounded-md border transition-colors duration-100 ${
                   isSelected ? "border-gold border-2" : "border-white/15"
-                } ${bg} ${textColor} flex flex-col items-center justify-center overflow-hidden text-[12px] font-mono ${
-                  clickable ? "cursor-pointer" : "cursor-not-allowed"
-                }`}
+                } ${bg} ${textColor} flex flex-col items-center justify-center overflow-hidden text-[11px] sm:text-[12px] font-mono ${
+                  clickable ? "cursor-pointer active:scale-95" : "cursor-not-allowed"
+                } ${isWinner ? "animate-[pulse_1.4s_ease-in-out_2]" : ""}`}
               >
                 {m.owner_name ? (
                   <>
-                    <span className="text-[9px] font-bold uppercase truncate max-w-full px-0.5">
+                    <span className="text-[8px] sm:text-[9px] font-bold uppercase truncate max-w-full px-0.5 leading-tight">
                       {m.owner_name}
                     </span>
-                    <span className="text-[8px] opacity-70">{m.minute}</span>
+                    <span className="text-[7px] sm:text-[8px] opacity-70 leading-tight">{m.minute}</span>
                   </>
                 ) : (
                   m.minute
@@ -137,11 +137,12 @@ export default function MinuteBoard({
           {sweep.status === "finished" && <Legend swatch="bg-red" label="Winner" />}
         </div>
 
+        {/* Desktop/tablet buy button — inline, only shown alongside the legend */}
         {sweep.status === "open" && selected.length > 0 && (
           <button
             onClick={startCheckout}
             disabled={checkingOut}
-            className="px-5 py-3 rounded-lg bg-gold text-[#241C00] font-bold text-sm disabled:opacity-60"
+            className="hidden sm:block px-5 py-3 rounded-lg bg-gold text-[#241C00] font-bold text-sm disabled:opacity-60"
           >
             {checkingOut
               ? "Starting checkout…"
@@ -151,6 +152,23 @@ export default function MinuteBoard({
       </div>
 
       {error && <p className="text-red text-sm mt-3">{error}</p>}
+
+      {/* Mobile — sticky bar at the bottom of the screen so the buy button is always reachable */}
+      {sweep.status === "open" && selected.length > 0 && (
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-pitchDark border-t border-white/10 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] z-20">
+          <button
+            onClick={startCheckout}
+            disabled={checkingOut}
+            className="w-full py-4 rounded-lg bg-gold text-[#241C00] font-bold text-base disabled:opacity-60"
+          >
+            {checkingOut
+              ? "Starting checkout…"
+              : `Buy ${selected.length} minute${selected.length > 1 ? "s" : ""} — £${total.toFixed(2)}`}
+          </button>
+        </div>
+      )}
+      {/* Spacer so the sticky bar never covers content underneath it on mobile */}
+      {sweep.status === "open" && selected.length > 0 && <div className="sm:hidden h-20" />}
     </div>
   );
 }
