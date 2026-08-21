@@ -36,7 +36,8 @@ export async function POST(request: Request) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const { sweepId, minutes, ownerName, ownerId } = session.metadata || {};
-    console.log("Webhook: checkout.session.completed", { sweepId, minutes, ownerName, ownerId });
+    const buyerEmail = session.customer_details?.email || null;
+    console.log("Webhook: checkout.session.completed", { sweepId, minutes, ownerName, ownerId, buyerEmail });
     if (sweepId && minutes) {
       const minuteNumbers = minutes.split(",").map(Number);
       // Only claims minutes that are still unowned — if two people somehow both got this
@@ -46,6 +47,7 @@ export async function POST(request: Request) {
         .update({
           owner_name: ownerName,
           owner_id: ownerId || null,
+          buyer_email: buyerEmail,
           stripe_checkout_session_id: session.id,
           purchased_at: new Date().toISOString(),
         })

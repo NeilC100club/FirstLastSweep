@@ -47,6 +47,7 @@ create table if not exists minutes (
   minute integer not null,
   owner_name text,
   owner_id uuid references profiles(id),
+  buyer_email text,
   stripe_checkout_session_id text,
   purchased_at timestamptz,
   unique (sweep_id, minute) -- a minute can only belong to one buyer, ever

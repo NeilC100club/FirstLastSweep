@@ -29,7 +29,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-5">
-      <div className="w-full max-w-md bg-pitch border border-white/10 rounded-2xl p-8">
+      <div className="w-full max-w-md bg-pitch border border-chalk/10 rounded-2xl p-8">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.png" alt="First and Last" className="h-20 w-auto mx-auto mb-4" />
         <div className="font-mono text-xs tracking-widest text-gold font-bold mb-2 text-center">
@@ -39,23 +39,23 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-mono tracking-wide text-white/60 mb-1">Email</label>
+            <label className="block text-xs font-mono tracking-wide text-chalk/60 mb-1">Email</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/15 text-chalk"
+              className="w-full px-4 py-3 rounded-lg bg-chalk/5 border border-chalk/15 text-chalk"
             />
           </div>
           <div>
-            <label className="block text-xs font-mono tracking-wide text-white/60 mb-1">Password</label>
+            <label className="block text-xs font-mono tracking-wide text-chalk/60 mb-1">Password</label>
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/15 text-chalk"
+              className="w-full px-4 py-3 rounded-lg bg-chalk/5 border border-chalk/15 text-chalk"
             />
           </div>
 
@@ -70,7 +70,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-sm text-white/60 mt-6">
+        <p className="text-sm text-chalk/60 mt-6">
           New here?{" "}
           <Link href="/signup" className="text-gold font-semibold">
             Create an account

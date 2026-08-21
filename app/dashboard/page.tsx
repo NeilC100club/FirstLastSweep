@@ -40,10 +40,10 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-pitch">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-chalk/10 bg-pitch">
         <span className="font-mono text-xs tracking-widest font-bold">FIRST AND LAST GOAL SWEEP</span>
         <div className="flex items-center gap-3">
-          <span className="font-mono text-xs px-3 py-1.5 rounded-full bg-white/10">{profile?.name}</span>
+          <span className="font-mono text-xs px-3 py-1.5 rounded-full bg-chalk/10">{profile?.name}</span>
           <SignOutButton />
         </div>
       </div>
@@ -80,7 +80,7 @@ export default async function DashboardPage() {
               <Link
                 key={s.id}
                 href={`/sweeps/${s.id}`}
-                className="block bg-pitch border border-white/10 rounded-2xl p-5"
+                className="block bg-pitch border border-chalk/10 rounded-2xl p-5"
               >
                 <div className="flex justify-between items-center mb-2">
                   <span className="font-mono text-[10px] tracking-wide px-2 py-1 rounded-full bg-gold/15 text-gold">
@@ -91,20 +91,20 @@ export default async function DashboardPage() {
                   </span>
                 </div>
                 <h3 className="font-display text-lg mb-1">{s.name}</h3>
-                <div className="text-xs text-white/60 mb-3">
+                <div className="text-xs text-chalk/60 mb-3">
                   {s.event_date} {s.kickoff_time ? `· ${s.kickoff_time.slice(0, 5)} kickoff` : ""}
                 </div>
-                <div className="h-1.5 rounded bg-white/10 overflow-hidden mb-2">
+                <div className="h-1.5 rounded bg-chalk/10 overflow-hidden mb-2">
                   <div className="h-full bg-gold" style={{ width: `${pct}%` }} />
                 </div>
-                <div className="text-xs text-white/60">
+                <div className="text-xs text-chalk/60">
                   {claimed} / {s.total_minutes} minutes claimed
                 </div>
               </Link>
             );
           })}
           {(!sweeps || sweeps.length === 0) && (
-            <p className="text-white/60 text-sm col-span-2">
+            <p className="text-chalk/60 text-sm col-span-2">
               No sweeps yet — create your first one above.
             </p>
           )}

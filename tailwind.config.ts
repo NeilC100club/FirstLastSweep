@@ -5,9 +5,9 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        pitch: "#0F3D2E",
-        pitchDark: "#0A2B20",
-        chalk: "#F5F3ED",
+        pitch: "#FFFFFF",
+        pitchDark: "#DFF3DF",
+        chalk: "#173620",
         gold: "#C9A227",
         red: "#B3412C",
       },

@@ -36,9 +36,9 @@ export default function SignupPage() {
   if (checkEmail) {
     return (
       <div className="min-h-screen flex items-center justify-center p-5">
-        <div className="w-full max-w-md bg-pitch border border-white/10 rounded-2xl p-8 text-center">
+        <div className="w-full max-w-md bg-pitch border border-chalk/10 rounded-2xl p-8 text-center">
           <h1 className="font-display text-2xl mb-3">Check your email</h1>
-          <p className="text-white/70 text-sm">
+          <p className="text-chalk/70 text-sm">
             We've sent a confirmation link to {email}. Click it, then come back and sign in.
           </p>
         </div>
@@ -48,7 +48,7 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-5">
-      <div className="w-full max-w-md bg-pitch border border-white/10 rounded-2xl p-8">
+      <div className="w-full max-w-md bg-pitch border border-chalk/10 rounded-2xl p-8">
         <div className="text-xs tracking-widest text-gold font-bold font-mono mb-2">
           NEWPORT COUNTY 100 CLUB FUNDRAISING SWEEP
         </div>
@@ -56,33 +56,33 @@ export default function SignupPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-mono tracking-wide text-white/60 mb-1">Name</label>
+            <label className="block text-xs font-mono tracking-wide text-chalk/60 mb-1">Name</label>
             <input
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/15 text-chalk"
+              className="w-full px-4 py-3 rounded-lg bg-chalk/5 border border-chalk/15 text-chalk"
             />
           </div>
           <div>
-            <label className="block text-xs font-mono tracking-wide text-white/60 mb-1">Email</label>
+            <label className="block text-xs font-mono tracking-wide text-chalk/60 mb-1">Email</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/15 text-chalk"
+              className="w-full px-4 py-3 rounded-lg bg-chalk/5 border border-chalk/15 text-chalk"
             />
           </div>
           <div>
-            <label className="block text-xs font-mono tracking-wide text-white/60 mb-1">Password</label>
+            <label className="block text-xs font-mono tracking-wide text-chalk/60 mb-1">Password</label>
             <input
               type="password"
               required
               minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/15 text-chalk"
+              className="w-full px-4 py-3 rounded-lg bg-chalk/5 border border-chalk/15 text-chalk"
             />
           </div>
 
@@ -97,7 +97,7 @@ export default function SignupPage() {
           </button>
         </form>
 
-        <p className="text-sm text-white/60 mt-6">
+        <p className="text-sm text-chalk/60 mt-6">
           Already have an account?{" "}
           <Link href="/login" className="text-gold font-semibold">
             Sign in

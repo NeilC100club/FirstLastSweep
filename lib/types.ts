@@ -21,6 +21,7 @@ export type Minute = {
   minute: number;
   owner_name: string | null;
   owner_id: string | null;
+  buyer_email: string | null;
   stripe_checkout_session_id: string | null;
   purchased_at: string | null;
 };

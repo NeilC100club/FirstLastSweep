@@ -33,7 +33,7 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
   return (
     <div className="min-h-screen">
       <div className="max-w-4xl mx-auto px-5 py-6 pb-20">
-        <a href="/dashboard" className="text-sm text-white/60 mb-4 inline-block">
+        <a href="/dashboard" className="text-sm text-chalk/60 mb-4 inline-block">
           ← All sweeps
         </a>
 
@@ -42,7 +42,7 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt="First and Last" className="h-12 w-auto mb-2" />
             <h1 className="font-display text-2xl sm:text-3xl mb-2 leading-tight">{sweep.name}</h1>
-            <div className="text-sm text-white/60 leading-relaxed">
+            <div className="text-sm text-chalk/60 leading-relaxed">
               {sweep.event_date}
               {sweep.kickoff_time ? ` · ${sweep.kickoff_time.slice(0, 5)} kickoff` : ""}
               <br className="sm:hidden" />
@@ -53,25 +53,25 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
           </div>
           <div className="w-full sm:w-auto text-left sm:text-right bg-gold/10 border border-gold/30 rounded-xl px-5 py-3.5 sm:min-w-[150px] flex sm:block justify-between items-center">
             <div>
-              <div className="font-mono text-[11px] text-white/60 tracking-wide">Prize pool</div>
+              <div className="font-mono text-[11px] text-chalk/60 tracking-wide">Prize pool</div>
               <div className="font-display text-3xl text-gold leading-tight">£{prizePool.toFixed(2)}</div>
             </div>
-            <div className="text-xs text-white/50">
+            <div className="text-xs text-chalk/50">
               {claimedCount} / {sweep.total_minutes} claimed
             </div>
           </div>
         </div>
 
         {sweep.cause && (
-          <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4">
+          <div className="bg-chalk/5 border border-chalk/10 rounded-xl p-4 mb-4">
             <div className="font-mono text-[11px] text-gold tracking-wide mb-2">THE CAUSE</div>
-            <p className="text-sm text-white/80">{sweep.cause}</p>
+            <p className="text-sm text-chalk/80">{sweep.cause}</p>
           </div>
         )}
 
         <div className="bg-red/5 border border-red/20 rounded-xl p-4 mb-5">
           <div className="font-mono text-[11px] text-gold tracking-wide mb-2">STANDARD TERMS</div>
-          <ul className="list-disc pl-4 space-y-1 text-xs text-white/75">
+          <ul className="list-disc pl-4 space-y-1 text-xs text-chalk/75">
             {STANDARD_TERMS.map((t) => (
               <li key={t}>{t}</li>
             ))}
@@ -102,9 +102,20 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
           minutes={minutes || []}
           currentUserId={user.id}
           organizerStripeOnboarded={!!organizerProfile?.stripe_onboarded}
+          organizerName={organizerProfile?.name}
         />
 
-        {isOrganizer && <OrganizerControls sweep={sweep} />}
+        {isOrganizer && (
+          <div className="flex flex-wrap items-center gap-4 mt-4">
+            <OrganizerControls sweep={sweep} />
+            <a
+              href={`/sweeps/${sweep.id}/buyers`}
+              className="text-sm text-gold hover:underline"
+            >
+              View buyers & contact details →
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -113,7 +124,7 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
 function ResultRow({ label, minute, owner }: { label: string; minute: number; owner?: string | null }) {
   return (
     <div className="flex justify-between text-sm">
-      <span className="text-white/70">
+      <span className="text-chalk/70">
         {label} — minute {minute}
       </span>
       <span className="font-bold text-red-300">{owner ? `${owner} wins` : "Unclaimed — goes to the 100 CLUB"}</span>

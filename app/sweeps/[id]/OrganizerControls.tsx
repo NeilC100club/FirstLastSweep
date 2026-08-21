@@ -43,7 +43,7 @@ export default function OrganizerControls({ sweep }: { sweep: Sweep }) {
         <button
           onClick={lockBoard}
           disabled={saving}
-          className="px-5 py-3 rounded-lg border border-white/15 text-sm"
+          className="px-5 py-3 rounded-lg border border-chalk/15 text-sm"
         >
           {saving ? "Locking…" : "Lock board & kick off"}
         </button>
@@ -64,11 +64,11 @@ export default function OrganizerControls({ sweep }: { sweep: Sweep }) {
         ) : (
           <form
             onSubmit={submitResult}
-            className="bg-pitch border border-white/10 rounded-2xl p-6 space-y-4 max-w-sm"
+            className="bg-pitch border border-chalk/10 rounded-2xl p-6 space-y-4 max-w-sm"
           >
             <h3 className="font-display text-lg">Enter the result</h3>
 
-            <label className="flex items-center gap-2 text-sm text-white/75">
+            <label className="flex items-center gap-2 text-sm text-chalk/75">
               <input
                 type="checkbox"
                 checked={noGoals}
@@ -84,7 +84,7 @@ export default function OrganizerControls({ sweep }: { sweep: Sweep }) {
             </label>
 
             <div>
-              <label className="block text-xs font-mono tracking-wide text-white/60 mb-1">
+              <label className="block text-xs font-mono tracking-wide text-chalk/60 mb-1">
                 First goal — minute
               </label>
               <input
@@ -94,12 +94,12 @@ export default function OrganizerControls({ sweep }: { sweep: Sweep }) {
                 disabled={noGoals}
                 value={firstMin}
                 onChange={(e) => setFirstMin(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/15 text-chalk disabled:opacity-50"
+                className="w-full px-4 py-3 rounded-lg bg-chalk/5 border border-chalk/15 text-chalk disabled:opacity-50"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-mono tracking-wide text-white/60 mb-1">
+              <label className="block text-xs font-mono tracking-wide text-chalk/60 mb-1">
                 Last goal — minute
               </label>
               <input
@@ -109,7 +109,7 @@ export default function OrganizerControls({ sweep }: { sweep: Sweep }) {
                 disabled={noGoals}
                 value={lastMin}
                 onChange={(e) => setLastMin(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/15 text-chalk disabled:opacity-50"
+                className="w-full px-4 py-3 rounded-lg bg-chalk/5 border border-chalk/15 text-chalk disabled:opacity-50"
               />
             </div>
 
@@ -117,7 +117,7 @@ export default function OrganizerControls({ sweep }: { sweep: Sweep }) {
               <button
                 type="button"
                 onClick={() => setShowResultForm(false)}
-                className="px-4 py-2.5 rounded-lg border border-white/15 text-sm"
+                className="px-4 py-2.5 rounded-lg border border-chalk/15 text-sm"
               >
                 Cancel
               </button>
