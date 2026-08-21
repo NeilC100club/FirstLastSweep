@@ -31,7 +31,7 @@ create table if not exists sweeps (
   name text not null,
   event_date date,
   kickoff_time time,
-  price_per_minute integer not null, -- stored in pence
+  price_per_minute integer not null check (price_per_minute between 100 and 1000), -- pence — £1 to £10
   total_minutes integer not null default 90,
   cause text,
   status text not null default 'open' check (status in ('open', 'locked', 'finished')),

@@ -20,8 +20,14 @@ export default function NewSweepPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+
+    if (price < 1 || price > 10) {
+      setError("Price per minute must be between £1 and £10.");
+      return;
+    }
+
+    setLoading(true);
 
     const {
       data: { user },
@@ -135,11 +141,14 @@ export default function NewSweepPage() {
                 <input
                   type="number"
                   min={1}
+                  max={10}
+                  step={0.5}
                   value={price}
                   onChange={(e) => setPrice(Number(e.target.value))}
                   className="w-full pl-8 pr-4 py-3.5 rounded-lg bg-chalk/5 border border-chalk/15 text-chalk"
                 />
               </div>
+              <p className="text-xs text-chalk/40 mt-1.5">Between £1 and £10 per minute.</p>
             </div>
             <div>
               <label className="block text-xs font-mono tracking-wide text-chalk/60 mb-1.5">
