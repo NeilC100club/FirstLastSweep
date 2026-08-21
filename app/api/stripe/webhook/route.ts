@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createServiceClient } from "@/lib/supabase/server";
+import { sendPurchaseConfirmation } from "@/lib/email";
 import type Stripe from "stripe";
 
 // Stripe calls this URL directly (not the browser), so it uses the service-role
@@ -61,6 +62,29 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
       console.log("Webhook: updated rows", data?.length ?? 0);
+
+      // Send a confirmation email — only for the minutes THIS webhook actually claimed
+      // (data), not ones that may already have been taken, and only if we have an email.
+      if (buyerEmail && data && data.length > 0) {
+        const { data: sweep } = await supabase
+          .from("sweeps")
+          .select("name, price_per_minute, event_date, kickoff_time")
+          .eq("id", sweepId)
+          .single();
+
+        if (sweep) {
+          await sendPurchaseConfirmation({
+            to: buyerEmail,
+            buyerName: ownerName || "there",
+            sweepName: sweep.name,
+            minutes: data.map((m) => m.minute),
+            pricePerMinute: sweep.price_per_minute,
+            eventDate: sweep.event_date,
+            kickoffTime: sweep.kickoff_time,
+            sweepUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/sweeps/${sweepId}`,
+          });
+        }
+      }
     } else {
       console.error("Webhook: missing sweepId or minutes in session metadata");
     }
