@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Minute, Sweep } from "@/lib/types";
@@ -24,22 +24,15 @@ export default function MinuteBoard({
   const [checkingOut, setCheckingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
-  const gridRef = useRef<HTMLDivElement>(null);
 
   async function downloadPdf() {
-    if (!gridRef.current) return;
     setExportingPdf(true);
     try {
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import("html2canvas"),
-        import("jspdf"),
-      ]);
-
-      const canvas = await html2canvas(gridRef.current, { backgroundColor: "#ffffff", scale: 2 });
-      const imgData = canvas.toDataURL("image/png");
+      const { jsPDF } = await import("jspdf");
 
       const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
       const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
       const margin = 40;
       let y = margin;
 
@@ -98,12 +91,48 @@ export default function MinuteBoard({
         };
         describeGoal("First goal", sweep.goal_minute_first);
         describeGoal("Last goal", sweep.goal_minute_last);
-        y += 8;
+        y += 10;
       }
 
-      const imgWidth = pageWidth - margin * 2;
-      const imgHeight = (canvas.height / canvas.width) * imgWidth;
-      doc.addImage(imgData, "PNG", margin, y, imgWidth, imgHeight);
+      // Minute-by-minute list — plain text rather than a screenshot of the on-screen grid,
+      // so it's always crisp, always readable, and never gets cut off regardless of how
+      // many minutes the sweep has. Flows across pages automatically if it runs long.
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text("Minutes", margin, y);
+      y += 10;
+
+      const columns = 3;
+      const colGap = 18;
+      const colWidth = (pageWidth - margin * 2 - colGap * (columns - 1)) / columns;
+      const rowHeight = 20;
+      const bottomLimit = pageHeight - margin;
+
+      let topY = y + 14;
+      let colIndex = 0;
+      let rowY = topY;
+
+      doc.setFontSize(11);
+      minutes.forEach((m) => {
+        if (rowY + rowHeight > bottomLimit) {
+          colIndex += 1;
+          if (colIndex >= columns) {
+            doc.addPage();
+            topY = margin + 10;
+            colIndex = 0;
+          }
+          rowY = topY;
+        }
+
+        const colX = margin + colIndex * (colWidth + colGap);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(20, 20, 20);
+        doc.text(`${m.minute}.`, colX, rowY);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(m.owner_name ? 20 : 150, m.owner_name ? 20 : 150, m.owner_name ? 20 : 150);
+        doc.text(m.owner_name || "Open", colX + 26, rowY, { maxWidth: colWidth - 26 });
+        rowY += rowHeight;
+      });
 
       const safeName = sweep.name.replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "");
       doc.save(`${safeName || "sweep"}-board.pdf`);
@@ -166,7 +195,7 @@ export default function MinuteBoard({
 
   return (
     <div>
-      <div ref={gridRef} className="bg-pitch border border-chalk/10 rounded-2xl p-3 sm:p-5">
+      <div className="bg-pitch border border-chalk/10 rounded-2xl p-3 sm:p-5">
         <div className="grid grid-cols-6 sm:grid-cols-9 gap-1.5 sm:gap-2">
           {minutes.map((m) => {
             const isMine = m.owner_id === currentUserId;
