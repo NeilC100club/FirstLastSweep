@@ -110,7 +110,7 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
 
         {isOrganizer && (
           <div className="flex flex-wrap items-center gap-4 mt-4">
-            <OrganizerControls sweep={sweep} />
+           <OrganizerControls sweep={sweep} />
             
               href={`/sweeps/${sweep.id}/buyers`}
               className="text-sm text-gold hover:underline"
