@@ -20,7 +20,7 @@ export default async function BuyersPage({ params }: { params: { id: string } })
     .order("minute", { ascending: true });
 
   // Group by buyer (name + email) so someone who bought several minutes shows as one row.
-  const byBuyer = new Map
+    const byBuyer = new Map<
     string,
     { name: string; email: string | null; minuteList: number[]; total: number }
   >();
