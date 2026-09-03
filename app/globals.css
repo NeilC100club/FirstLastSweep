@@ -4,13 +4,13 @@
 
 body {
   background:
-    radial-gradient(ellipse at 50% -10%, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 60%),
-    repeating-linear-gradient(100deg, #8fd98a 0px, #8fd98a 90px, #7bc977 90px, #7bc977 180px);
+    radial-gradient(ellipse at 50% -10%, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 60%),
+    repeating-linear-gradient(100deg, #141210 0px, #141210 90px, #221c12 90px, #221c12 180px);
   background-attachment: fixed;
 }
 
 input:focus,
 button:focus-visible {
-  outline: 2px solid #c9a227;
+  outline: 2px solid #f2a900;
   outline-offset: 2px;
 }
