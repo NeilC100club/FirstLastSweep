@@ -6,9 +6,9 @@ const config: Config = {
     extend: {
       colors: {
         pitch: "#FFFFFF",
-        pitchDark: "#DFF3DF",
-        chalk: "#173620",
-        gold: "#C9A227",
+        pitchDark: "#FBEBD2",
+        chalk: "#161412",
+        gold: "#F2A900",
         red: "#B3412C",
       },
       fontFamily: {
