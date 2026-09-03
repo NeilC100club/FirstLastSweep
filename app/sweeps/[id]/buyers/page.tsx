@@ -20,7 +20,7 @@ export default async function BuyersPage({ params }: { params: { id: string } })
     .order("minute", { ascending: true });
 
   // Group by buyer (name + email) so someone who bought several minutes shows as one row.
-  const byBuyer = new Map<
+  const byBuyer = new Map
     string,
     { name: string; email: string | null; minuteList: number[]; total: number }
   >();
@@ -52,7 +52,7 @@ export default async function BuyersPage({ params }: { params: { id: string } })
           ← Back to board
         </a>
 
-        <div className="font-mono text-[11px] tracking-widest text-gold mb-1">ORGANISER ONLY</div>
+        <div className="font-mono text-[11px] tracking-widest text-chalk/50 mb-1">ORGANISER ONLY</div>
         <h1 className="font-display text-2xl sm:text-3xl mb-1">{sweep.name} — buyers</h1>
         <p className="text-sm text-chalk/60 mb-6">
           Everyone who's bought a minute, and how to reach them once it's time to settle up.
@@ -102,8 +102,8 @@ export default async function BuyersPage({ params }: { params: { id: string } })
         </div>
 
         {sweep.status === "finished" && (sweep.goal_minute_first || sweep.goal_minute_last) && (
-          <div className="bg-red/10 border border-red/30 rounded-xl p-4 mt-6">
-            <div className="font-mono text-[11px] text-gold tracking-wide mb-2">WHO'S OWED THE PRIZE</div>
+          <div className="bg-gold/10 border border-gold/30 rounded-xl p-4 mt-6">
+            <div className="font-mono text-[11px] text-chalk/50 tracking-wide mb-2">WHO'S OWED THE PRIZE</div>
             {sweep.goal_minute_first && (
               <WinnerRow label="First goal" minute={sweep.goal_minute_first} minutes={minutes || []} />
             )}
@@ -153,7 +153,7 @@ function WinnerRow({
       <span className="text-chalk/70">
         {label} — minute {minute}
       </span>
-      <span className="font-bold text-red-300">
+      <span className={`font-bold ${winner?.owner_name ? "text-gold" : "text-chalk/50"}`}>
         {winner?.owner_name
           ? `${winner.owner_name}${winner.buyer_email ? ` (${winner.buyer_email})` : ""}`
           : "Unclaimed — goes to the 100 CLUB"}
