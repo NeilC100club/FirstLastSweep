@@ -40,7 +40,10 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-4 mb-5">
           <div className="min-w-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="First and Last" className="h-12 w-auto mb-2" />
+            <img src="/logo.png" alt="First and Last" className="h-12 w-auto mb-1" />
+            <div className="font-mono text-[10px] tracking-widest text-gold font-bold mb-2">
+              NEWPORT COUNTY 100 CLUB
+            </div>
             <h1 className="font-display text-2xl sm:text-3xl mb-2 leading-tight">{sweep.name}</h1>
             <div className="text-sm text-chalk/60 leading-relaxed">
               {sweep.event_date}
@@ -64,13 +67,13 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
 
         {sweep.cause && (
           <div className="bg-chalk/5 border border-chalk/10 rounded-xl p-4 mb-4">
-            <div className="font-mono text-[11px] text-gold tracking-wide mb-2">THE CAUSE</div>
+            <div className="font-mono text-[11px] text-chalk/50 tracking-wide mb-2">THE CAUSE</div>
             <p className="text-sm text-chalk/80">{sweep.cause}</p>
           </div>
         )}
 
-        <div className="bg-red/5 border border-red/20 rounded-xl p-4 mb-5">
-          <div className="font-mono text-[11px] text-gold tracking-wide mb-2">STANDARD TERMS</div>
+        <div className="bg-chalk/5 border border-chalk/10 rounded-xl p-4 mb-5">
+          <div className="font-mono text-[11px] text-chalk/50 tracking-wide mb-2">STANDARD TERMS</div>
           <ul className="list-disc pl-4 space-y-1 text-xs text-chalk/75">
             {STANDARD_TERMS.map((t) => (
               <li key={t}>{t}</li>
@@ -79,7 +82,7 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
         </div>
 
         {sweep.status === "finished" && (sweep.goal_minute_first || sweep.goal_minute_last) && (
-          <div className="bg-red/10 border border-red/30 rounded-xl p-4 mb-5 space-y-2">
+          <div className="bg-gold/10 border border-gold/30 rounded-xl p-4 mb-5 space-y-2">
             {sweep.goal_minute_first && (
               <ResultRow
                 label="First goal"
@@ -108,7 +111,7 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
         {isOrganizer && (
           <div className="flex flex-wrap items-center gap-4 mt-4">
             <OrganizerControls sweep={sweep} />
-            <a
+            
               href={`/sweeps/${sweep.id}/buyers`}
               className="text-sm text-gold hover:underline"
             >
@@ -127,7 +130,9 @@ function ResultRow({ label, minute, owner }: { label: string; minute: number; ow
       <span className="text-chalk/70">
         {label} — minute {minute}
       </span>
-      <span className="font-bold text-red-300">{owner ? `${owner} wins` : "Unclaimed — goes to the 100 CLUB"}</span>
+      <span className={`font-bold ${owner ? "text-gold" : "text-chalk/50"}`}>
+        {owner ? `${owner} wins` : "Unclaimed — goes to the 100 CLUB"}
+      </span>
     </div>
   );
 }
