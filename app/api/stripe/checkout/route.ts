@@ -48,9 +48,10 @@ export async function POST(request: Request) {
   }
 
   const { data: profile } = await supabase.from("profiles").select("name").eq("id", user.id).single();
-
+  // @ts-expect-error - managed_payments isn't in this Stripe SDK version's types yet
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
+    managed_payments: { enabled: false },
     line_items: [
       {
         price_data: {
