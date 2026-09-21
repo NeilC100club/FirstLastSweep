@@ -57,7 +57,7 @@ export default function OrganizerControls({ sweep }: { sweep: Sweep }) {
         {!showResultForm ? (
           <button
             onClick={() => setShowResultForm(true)}
-            className="px-5 py-3 rounded-lg bg-gold text-[#241C00] font-bold text-sm"
+            className="px-5 py-3 rounded-lg bg-[var(--club-primary)] text-[var(--club-text-on-primary)] font-bold text-sm"
           >
             Enter result
           </button>
@@ -124,7 +124,7 @@ export default function OrganizerControls({ sweep }: { sweep: Sweep }) {
               <button
                 type="submit"
                 disabled={saving}
-                className="px-4 py-2.5 rounded-lg bg-gold text-[#241C00] font-bold text-sm disabled:opacity-60"
+                className="px-4 py-2.5 rounded-lg bg-[var(--club-primary)] text-[var(--club-text-on-primary)] font-bold text-sm disabled:opacity-60"
               >
                 {saving ? "Saving…" : "Confirm result"}
               </button>

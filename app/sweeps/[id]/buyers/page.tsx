@@ -1,5 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { clubThemeStyle, DEFAULT_CLUB, type Club } from "@/lib/types";
 
 export default async function BuyersPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
@@ -8,9 +9,14 @@ export default async function BuyersPage({ params }: { params: { id: string } })
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: sweep } = await supabase.from("sweeps").select("*").eq("id", params.id).single();
+  const { data: sweep } = await supabase
+    .from("sweeps")
+    .select("*, club:clubs(*)")
+    .eq("id", params.id)
+    .single();
   if (!sweep) notFound();
   if (sweep.organizer_id !== user.id) redirect(`/sweeps/${params.id}`);
+  const club: Club = (sweep as unknown as { club: Club | null }).club || DEFAULT_CLUB;
 
   const { data: minutes } = await supabase
     .from("minutes")
@@ -46,7 +52,7 @@ export default async function BuyersPage({ params }: { params: { id: string } })
   const clubPot = totalCollected / 2;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" style={clubThemeStyle(club)}>
       <div className="max-w-3xl mx-auto px-5 py-6 pb-20">
         <a href={`/sweeps/${sweep.id}`} className="text-sm text-chalk/60 mb-4 inline-block">
           ← Back to board
@@ -61,7 +67,7 @@ export default async function BuyersPage({ params }: { params: { id: string } })
         <div className="grid grid-cols-3 gap-3 mb-6">
           <SummaryCard label="Total collected" value={`£${(totalCollected / 100).toFixed(2)}`} />
           <SummaryCard label="Prize pot (50%)" value={`£${(prizePot / 100).toFixed(2)}`} highlight />
-          <SummaryCard label="100 Club (50%)" value={`£${(clubPot / 100).toFixed(2)}`} />
+          <SummaryCard label={`${club.fundraiser_name} (50%)`} value={`£${(clubPot / 100).toFixed(2)}`} />
         </div>
 
         <div className="bg-pitch border border-chalk/10 rounded-2xl overflow-hidden">
@@ -83,7 +89,7 @@ export default async function BuyersPage({ params }: { params: { id: string } })
                     <td className="p-4 font-semibold">{b.name}</td>
                     <td className="p-4 text-chalk/70">
                       {b.email ? (
-                        <a href={`mailto:${b.email}`} className="text-gold hover:underline">
+                        <a href={`mailto:${b.email}`} className="text-[var(--club-primary)] hover:underline">
                           {b.email}
                         </a>
                       ) : (
@@ -102,13 +108,23 @@ export default async function BuyersPage({ params }: { params: { id: string } })
         </div>
 
         {sweep.status === "finished" && (sweep.goal_minute_first || sweep.goal_minute_last) && (
-          <div className="bg-gold/10 border border-gold/30 rounded-xl p-4 mt-6">
+          <div className="bg-[rgb(var(--club-primary-rgb)/10%)] border border-[rgb(var(--club-primary-rgb)/30%)] rounded-xl p-4 mt-6">
             <div className="font-mono text-[11px] text-chalk/50 tracking-wide mb-2">WHO'S OWED THE PRIZE</div>
             {sweep.goal_minute_first && (
-              <WinnerRow label="First goal" minute={sweep.goal_minute_first} minutes={minutes || []} />
+              <WinnerRow
+                label="First goal"
+                minute={sweep.goal_minute_first}
+                minutes={minutes || []}
+                fundraiserName={club.fundraiser_name}
+              />
             )}
             {sweep.goal_minute_last && (
-              <WinnerRow label="Last goal" minute={sweep.goal_minute_last} minutes={minutes || []} />
+              <WinnerRow
+                label="Last goal"
+                minute={sweep.goal_minute_last}
+                minutes={minutes || []}
+                fundraiserName={club.fundraiser_name}
+              />
             )}
           </div>
         )}
@@ -129,11 +145,15 @@ function SummaryCard({
   return (
     <div
       className={`rounded-xl border p-4 ${
-        highlight ? "bg-gold/10 border-gold/30" : "bg-chalk/5 border-chalk/10"
+        highlight
+          ? "bg-[rgb(var(--club-primary-rgb)/10%)] border-[rgb(var(--club-primary-rgb)/30%)]"
+          : "bg-chalk/5 border-chalk/10"
       }`}
     >
       <div className="font-mono text-[10px] text-chalk/50 tracking-wide mb-1">{label}</div>
-      <div className={`font-display text-xl ${highlight ? "text-gold" : "text-chalk"}`}>{value}</div>
+      <div className={`font-display text-xl ${highlight ? "text-[var(--club-primary)]" : "text-chalk"}`}>
+        {value}
+      </div>
     </div>
   );
 }
@@ -142,10 +162,12 @@ function WinnerRow({
   label,
   minute,
   minutes,
+  fundraiserName,
 }: {
   label: string;
   minute: number;
   minutes: { minute: number; owner_name: string | null; buyer_email: string | null }[];
+  fundraiserName: string;
 }) {
   const winner = minutes.find((m) => m.minute === minute);
   return (
@@ -153,10 +175,10 @@ function WinnerRow({
       <span className="text-chalk/70">
         {label} — minute {minute}
       </span>
-      <span className={`font-bold ${winner?.owner_name ? "text-gold" : "text-chalk/50"}`}>
+      <span className={`font-bold ${winner?.owner_name ? "text-[var(--club-primary)]" : "text-chalk/50"}`}>
         {winner?.owner_name
           ? `${winner.owner_name}${winner.buyer_email ? ` (${winner.buyer_email})` : ""}`
-          : "Unclaimed — goes to the 100 CLUB"}
+          : `Unclaimed — goes to the ${fundraiserName}`}
       </span>
     </div>
   );

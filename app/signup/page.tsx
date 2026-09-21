@@ -50,7 +50,7 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center p-5">
       <div className="w-full max-w-md bg-pitch border border-chalk/10 rounded-2xl p-8">
         <div className="text-xs tracking-widest text-gold font-bold font-mono mb-2">
-          NEWPORT COUNTY 100 CLUB FUNDRAISING SWEEP
+          FIRST AND LAST GOAL SWEEP
         </div>
         <h1 className="font-display text-3xl mb-6">Claim your minute.</h1>
 

@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "First and Last Goal Sweep",
-  description: "Newport County 100 Club fundraising sweep",
+  description: "Digital minute-sweepstake fundraising for football clubs",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -33,7 +33,7 @@ export default function LoginPage() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.png" alt="First and Last" className="h-20 w-auto mx-auto mb-4" />
         <div className="font-mono text-xs tracking-widest text-gold font-bold mb-2 text-center">
-          NEWPORT COUNTY 100 CLUB FUNDRAISING SWEEP
+          FIRST AND LAST GOAL SWEEP
         </div>
         <h1 className="font-display text-3xl mb-6 text-center">Welcome back.</h1>
 

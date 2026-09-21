@@ -68,11 +68,14 @@ export async function POST(request: Request) {
       if (buyerEmail && data && data.length > 0) {
         const { data: sweep } = await supabase
           .from("sweeps")
-          .select("name, price_per_minute, event_date, kickoff_time")
+          .select("name, price_per_minute, event_date, kickoff_time, club:clubs(name, fundraiser_name, primary_color, text_on_primary)")
           .eq("id", sweepId)
           .single();
 
         if (sweep) {
+          const club = (sweep as unknown as {
+            club: { name: string; fundraiser_name: string; primary_color: string; text_on_primary: string } | null;
+          }).club;
           await sendPurchaseConfirmation({
             to: buyerEmail,
             buyerName: ownerName || "there",
@@ -82,6 +85,10 @@ export async function POST(request: Request) {
             eventDate: sweep.event_date,
             kickoffTime: sweep.kickoff_time,
             sweepUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/sweeps/${sweepId}`,
+            clubName: club?.name,
+            fundraiserName: club?.fundraiser_name,
+            accentColor: club?.primary_color,
+            textOnAccent: club?.text_on_primary,
           });
         }
       }

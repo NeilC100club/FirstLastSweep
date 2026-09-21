@@ -19,6 +19,10 @@ export async function sendPurchaseConfirmation({
   eventDate,
   kickoffTime,
   sweepUrl,
+  clubName = "Newport County 100 Club",
+  fundraiserName = "100 Club",
+  accentColor = "#C9A227",
+  textOnAccent = "#241C00",
 }: {
   to: string;
   buyerName: string;
@@ -28,6 +32,10 @@ export async function sendPurchaseConfirmation({
   eventDate: string | null;
   kickoffTime: string | null;
   sweepUrl: string;
+  clubName?: string;
+  fundraiserName?: string;
+  accentColor?: string;
+  textOnAccent?: string;
 }) {
   if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
     console.error("Email: GMAIL_USER or GMAIL_APP_PASSWORD not set — skipping send");
@@ -50,17 +58,17 @@ Sweep: ${sweepName}
 ${when ? `When: ${when}\n` : ""}Minute${minutes.length > 1 ? "s" : ""}: ${minuteList}
 Paid: £${total}
 
-Half of everything collected goes into the prize pot, and half goes to the Newport County 100 Club fundraising pot. If the goal your minute needs doesn't land exactly — including 0-0 or an injury-time goal — that share goes to the 100 Club too.
+Half of everything collected goes into the prize pot, and half goes to the ${clubName} ${fundraiserName} fundraising pot. If the goal your minute needs doesn't land exactly — including 0-0 or an injury-time goal — that share goes to the ${fundraiserName} too.
 
 You can check the board any time here:
 ${sweepUrl}
 
 Good luck!
-Newport County 100 Club`;
+${clubName} ${fundraiserName}`;
 
   const html = `
     <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; color: #173620;">
-      <div style="background: #C9A227; color: #241C00; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
+      <div style="background: ${accentColor}; color: ${textOnAccent}; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
         <h1 style="margin: 0; font-size: 20px;">You're in! 🎉</h1>
       </div>
       <div style="background: #ffffff; padding: 24px; border: 1px solid #eee; border-top: none; border-radius: 0 0 12px 12px;">
@@ -73,21 +81,21 @@ Newport County 100 Club`;
           <tr><td style="padding: 6px 0; color: #666;">Paid</td><td style="padding: 6px 0; text-align: right; font-weight: bold;">£${total}</td></tr>
         </table>
         <p style="font-size: 13px; color: #666; line-height: 1.5;">
-          Half of everything collected goes into the prize pot, half goes to the Newport County 100 Club fundraising pot.
+          Half of everything collected goes into the prize pot, half goes to the ${clubName} ${fundraiserName} fundraising pot.
           If the goal your minute needs doesn't land exactly — including a 0-0 result or an injury-time goal —
-          that share goes to the 100 Club too.
+          that share goes to the ${fundraiserName} too.
         </p>
         <div style="text-align: center; margin: 24px 0 8px;">
-          <a href="${sweepUrl}" style="background: #C9A227; color: #241C00; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">View the board</a>
+          <a href="${sweepUrl}" style="background: ${accentColor}; color: ${textOnAccent}; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">View the board</a>
         </div>
-        <p style="text-align: center; font-size: 12px; color: #999; margin-top: 20px;">Good luck! — Newport County 100 Club</p>
+        <p style="text-align: center; font-size: 12px; color: #999; margin-top: 20px;">Good luck! — ${clubName} ${fundraiserName}</p>
       </div>
     </div>
   `;
 
   try {
     await getTransporter().sendMail({
-      from: `"Newport County 100 Club" <${process.env.GMAIL_USER}>`,
+      from: `"${clubName} ${fundraiserName}" <${process.env.GMAIL_USER}>`,
       to,
       subject,
       text,

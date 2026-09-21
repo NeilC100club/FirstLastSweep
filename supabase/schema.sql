@@ -99,3 +99,45 @@ begin
   select p_sweep_id, generate_series(1, p_total_minutes);
 end;
 $$ language plpgsql security definer;
+
+-- ---------------------------------------------------------------------------
+-- Multi-club support — added so the same app/database can run sweeps for more
+-- than one club, each with its own name, fundraising-pot wording, crest and
+-- colour scheme. Existing sweeps are backfilled onto Newport County below, so
+-- this is safe to run again on a database that already has data in it.
+-- ---------------------------------------------------------------------------
+
+create table if not exists clubs (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  short_name text not null unique,
+  fundraiser_name text not null default '100 Club', -- what the fundraising pot is called
+  logo_url text, -- path/URL to the club's crest; falls back to the app's default logo if null
+  primary_color text not null default '#F2A900', -- main accent (CTAs, prize pool, "yours" swatch)
+  secondary_color text not null default '#4C7A5A', -- "taken" minute swatch
+  text_on_primary text not null default '#241C00', -- text colour that reads on top of primary_color
+  created_at timestamptz not null default now()
+);
+
+alter table clubs enable row level security;
+
+create policy "Clubs are viewable by anyone signed in"
+  on clubs for select
+  to authenticated
+  using (true);
+
+-- Each sweep is branded for one club.
+alter table sweeps add column if not exists club_id uuid references clubs(id);
+
+-- Seed the clubs currently running sweeps. Re-running this is safe — the
+-- unique constraint on short_name means each club is only inserted once.
+insert into clubs (name, short_name, fundraiser_name, logo_url, primary_color, secondary_color, text_on_primary)
+values
+  ('Newport County AFC', 'Newport County', '100 Club', null, '#F2A900', '#4C7A5A', '#241C00'),
+  ('Graig Villa Dino', 'GVD', 'Club Fund', '/logo-gvd.png', '#F2C400', '#161412', '#161412')
+on conflict (short_name) do nothing;
+
+-- Backfill any sweeps created before clubs existed onto Newport County, so
+-- nothing on an existing deployment loses its branding.
+update sweeps set club_id = (select id from clubs where short_name = 'Newport County' limit 1)
+where club_id is null;

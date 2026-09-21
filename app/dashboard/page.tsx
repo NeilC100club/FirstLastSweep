@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { STANDARD_TERMS, type Sweep } from "@/lib/types";
+import { standardTerms, type Sweep, type Club } from "@/lib/types";
 import SignOutButton from "./SignOutButton";
+
+type SweepWithClub = Sweep & { club: Club | null };
 
 export default async function DashboardPage() {
   const supabase = createClient();
@@ -13,7 +15,7 @@ export default async function DashboardPage() {
 
   const { data: sweeps } = await supabase
     .from("sweeps")
-    .select("*")
+    .select("*, club:clubs(short_name, primary_color, text_on_primary)")
     .order("created_at", { ascending: false });
 
   const { data: profile } = await supabase
@@ -31,7 +33,7 @@ export default async function DashboardPage() {
       .not("owner_name", "is", null)
       .in(
         "sweep_id",
-        sweeps.map((s: Sweep) => s.id)
+        sweeps.map((s: SweepWithClub) => s.id)
       );
     (minuteRows || []).forEach((row: { sweep_id: string }) => {
       claimedCounts[row.sweep_id] = (claimedCounts[row.sweep_id] || 0) + 1;
@@ -46,9 +48,6 @@ export default async function DashboardPage() {
           <img src="/logo.png" alt="First and Last" className="h-8 w-auto" />
           <div className="leading-tight">
             <div className="font-mono text-xs tracking-widest font-bold">FIRST AND LAST GOAL SWEEP</div>
-            <div className="font-mono text-[10px] tracking-widest text-gold font-bold">
-              NEWPORT COUNTY 100 CLUB
-            </div>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -73,10 +72,10 @@ export default async function DashboardPage() {
           <p className="text-sm text-chalk/80 leading-relaxed mb-3">
             Each sweep splits a match into its 90 minutes. Buy the minute you fancy — if a goal
             goes in during that minute, you're in the money. Half of everything collected forms
-            the prize pot; the other half goes straight to the Newport County 100 Club fundraiser.
+            the prize pot; the other half goes straight to that sweep's club fund.
           </p>
           <ul className="list-disc pl-4 space-y-1 text-xs text-chalk/70">
-            {STANDARD_TERMS.map((t) => (
+            {standardTerms().map((t) => (
               <li key={t}>{t}</li>
             ))}
           </ul>
@@ -96,10 +95,11 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          {(sweeps || []).map((s: Sweep) => {
+          {(sweeps || []).map((s: SweepWithClub) => {
             const claimed = claimedCounts[s.id] || 0;
             const pct = Math.round((claimed / s.total_minutes) * 100);
             const isFinished = s.status === "finished";
+            const clubColor = s.club?.primary_color || "#F2A900";
             return (
               <Link
                 key={s.id}
@@ -118,14 +118,20 @@ export default async function DashboardPage() {
                 )}
                 <div className={isFinished ? "opacity-30 grayscale" : ""}>
                   <div className="flex justify-between items-center mb-2">
-                    <span
-                      className={`font-mono text-[10px] tracking-wide px-2 py-1 rounded-full ${
-                        s.status === "open" ? "bg-gold/15 text-gold" : "bg-chalk/10 text-chalk/60"
-                      }`}
-                    >
-                      {s.status.toUpperCase()}
-                    </span>
-                    <span className="font-mono text-xs text-gold">
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className="font-mono text-[10px] tracking-wide px-2 py-1 rounded-full"
+                        style={{ backgroundColor: `${clubColor}26`, color: clubColor }}
+                      >
+                        {s.status.toUpperCase()}
+                      </span>
+                      {s.club?.short_name && (
+                        <span className="font-mono text-[10px] tracking-wide px-2 py-1 rounded-full bg-chalk/10 text-chalk/60">
+                          {s.club.short_name}
+                        </span>
+                      )}
+                    </div>
+                    <span className="font-mono text-xs" style={{ color: clubColor }}>
                       £{(s.price_per_minute / 100).toFixed(2)}/min
                     </span>
                   </div>
@@ -134,7 +140,7 @@ export default async function DashboardPage() {
                     {s.event_date} {s.kickoff_time ? `· ${s.kickoff_time.slice(0, 5)} kickoff` : ""}
                   </div>
                   <div className="h-1.5 rounded bg-chalk/10 overflow-hidden mb-2">
-                    <div className="h-full bg-gold" style={{ width: `${pct}%` }} />
+                    <div className="h-full" style={{ width: `${pct}%`, backgroundColor: clubColor }} />
                   </div>
                   <div className="text-xs text-chalk/60">
                     {claimed} / {s.total_minutes} minutes claimed

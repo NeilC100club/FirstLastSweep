@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { STANDARD_TERMS } from "@/lib/types";
+import { standardTerms, type Club } from "@/lib/types";
 
 export default function NewSweepPage() {
   const router = useRouter();
   const supabase = createClient();
 
+  const [clubs, setClubs] = useState<Club[]>([]);
+  const [clubId, setClubId] = useState("");
   const [name, setName] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [kickoffTime, setKickoffTime] = useState("");
@@ -18,9 +20,25 @@ export default function NewSweepPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    supabase
+      .from("clubs")
+      .select("*")
+      .order("name", { ascending: true })
+      .then(({ data }) => setClubs(data || []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const selectedClub = clubs.find((c) => c.id === clubId);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (!clubId) {
+      setError("Please choose which club this sweep is for.");
+      return;
+    }
 
     if (price < 1 || price > 10) {
       setError("Price per minute must be between £1 and £10.");
@@ -41,6 +59,7 @@ export default function NewSweepPage() {
       .from("sweeps")
       .insert({
         organizer_id: user.id,
+        club_id: clubId,
         name,
         event_date: eventDate || null,
         kickoff_time: kickoffTime || null,
@@ -81,6 +100,33 @@ export default function NewSweepPage() {
           <div className="font-mono text-[11px] tracking-widest text-gold mb-1.5">NEW SWEEP</div>
           <h1 className="font-display text-2xl sm:text-3xl">Set up a sweep</h1>
         </div>
+
+        {/* Club */}
+        <fieldset className="space-y-4 mb-6">
+          <legend className="font-mono text-[11px] tracking-widest text-chalk/50 mb-1">CLUB</legend>
+          <div>
+            <label className="block text-xs font-mono tracking-wide text-chalk/60 mb-1.5">
+              Which club is this sweep for?
+            </label>
+            <select
+              required
+              value={clubId}
+              onChange={(e) => setClubId(e.target.value)}
+              className="w-full px-4 py-3.5 rounded-lg bg-chalk/5 border border-chalk/15 text-chalk"
+            >
+              <option value="" disabled>
+                Select a club…
+              </option>
+              {clubs.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </fieldset>
+
+        <div className="h-px bg-chalk/10 my-6" />
 
         {/* Match details */}
         <fieldset className="space-y-4">
@@ -166,7 +212,7 @@ export default function NewSweepPage() {
           </div>
           <p className="text-xs text-chalk/40">
             Board runs minute 1 to {totalMinutes || 90} · prize pool = {totalMinutes || 90} × £
-            {price || 0}, half goes to the 100 Club
+            {price || 0}, half goes to the {selectedClub?.fundraiser_name || "club fund"}
           </p>
         </fieldset>
 
@@ -194,7 +240,7 @@ export default function NewSweepPage() {
             STANDARD TERMS — APPLIED TO EVERY SWEEP
           </div>
           <ul className="list-disc pl-4 space-y-1.5 text-xs text-chalk/75 leading-relaxed">
-            {STANDARD_TERMS.map((t) => (
+            {standardTerms(selectedClub?.fundraiser_name).map((t) => (
               <li key={t}>{t}</li>
             ))}
           </ul>

@@ -3,16 +3,19 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import type { Minute, Sweep } from "@/lib/types";
+import type { Club, Minute, Sweep } from "@/lib/types";
+import { DEFAULT_CLUB } from "@/lib/types";
 
 export default function MinuteBoard({
   sweep,
+  club = DEFAULT_CLUB,
   minutes,
   currentUserId,
   organizerStripeOnboarded,
   organizerName,
 }: {
   sweep: Sweep;
+  club?: Club;
   minutes: Minute[];
   currentUserId: string;
   organizerStripeOnboarded: boolean;
@@ -71,7 +74,7 @@ export default function MinuteBoard({
       y += 14;
       doc.text(`Prize pot (50%): £${(prizePot / 100).toFixed(2)}`, margin, y);
       y += 14;
-      doc.text(`100 Club fundraising pot (50%): £${(clubPot / 100).toFixed(2)}`, margin, y);
+      doc.text(`${club.fundraiser_name} fundraising pot (50%): £${(clubPot / 100).toFixed(2)}`, margin, y);
       y += 22;
 
       if (sweep.status === "finished") {
@@ -85,7 +88,7 @@ export default function MinuteBoard({
         const describeGoal = (label: string, minute: number | null) => {
           if (!minute) return;
           const w = minutes.find((m) => m.minute === minute);
-          const outcome = w?.owner_name ? `${w.owner_name} wins` : "Unclaimed — goes to the 100 CLUB";
+          const outcome = w?.owner_name ? `${w.owner_name} wins` : `Unclaimed — goes to the ${club.fundraiser_name}`;
           doc.text(`${label} — minute ${minute}: ${outcome}`, margin, y);
           y += 14;
         };
@@ -209,15 +212,15 @@ export default function MinuteBoard({
             let textColor = "text-chalk";
             if (isWinner) {
               bg = "bg-red";
-              textColor = "text-[#241C00]";
+              textColor = "text-[var(--club-text-on-primary)]";
             } else if (isMine) {
-              bg = "bg-gold";
-              textColor = "text-[#241C00]";
+              bg = "bg-[var(--club-primary)]";
+              textColor = "text-[var(--club-text-on-primary)]";
             } else if (m.owner_name) {
-              bg = "bg-[#4C7A5A]";
+              bg = "bg-[var(--club-secondary)]";
               textColor = "text-white/95";
             } else if (isSelected) {
-              bg = "bg-gold/25 hover:bg-gold/30";
+              bg = "bg-[rgb(var(--club-primary-rgb)/25%)] hover:bg-[rgb(var(--club-primary-rgb)/30%)]";
             }
 
             return (
@@ -227,7 +230,7 @@ export default function MinuteBoard({
                 disabled={!clickable}
                 title={m.owner_name ? `Claimed by ${m.owner_name}` : "Available"}
                 className={`aspect-[0.85] rounded-md border transition-colors duration-100 ${
-                  isSelected ? "border-gold border-2" : "border-chalk/15"
+                  isSelected ? "border-[var(--club-primary)] border-2" : "border-chalk/15"
                 } ${bg} ${textColor} flex flex-col items-center justify-center overflow-hidden text-[11px] sm:text-[12px] font-mono ${
                   clickable ? "cursor-pointer active:scale-95" : "cursor-not-allowed"
                 } ${isWinner ? "animate-[pulse_1.4s_ease-in-out_2]" : ""}`}
@@ -251,8 +254,8 @@ export default function MinuteBoard({
       <div className="flex justify-between items-center flex-wrap gap-4 mt-5">
         <div className="flex gap-4 flex-wrap text-xs text-chalk/70">
           <Legend swatch="bg-chalk/5 border border-chalk/20" label="Open" />
-          <Legend swatch="bg-[#4C7A5A]" label="Taken" />
-          <Legend swatch="bg-gold" label="Yours" />
+          <Legend swatch="bg-[var(--club-secondary)]" label="Taken" />
+          <Legend swatch="bg-[var(--club-primary)]" label="Yours" />
           {sweep.status === "finished" && <Legend swatch="bg-red" label="Winner" />}
         </div>
 
@@ -270,7 +273,7 @@ export default function MinuteBoard({
             <button
               onClick={startCheckout}
               disabled={checkingOut}
-              className="hidden sm:block px-5 py-3 rounded-lg bg-gold text-[#241C00] font-bold text-sm disabled:opacity-60"
+              className="hidden sm:block px-5 py-3 rounded-lg bg-[var(--club-primary)] text-[var(--club-text-on-primary)] font-bold text-sm disabled:opacity-60"
             >
               {checkingOut
                 ? "Starting checkout…"
@@ -288,7 +291,7 @@ export default function MinuteBoard({
           <button
             onClick={startCheckout}
             disabled={checkingOut}
-            className="w-full py-4 rounded-lg bg-gold text-[#241C00] font-bold text-base disabled:opacity-60"
+            className="w-full py-4 rounded-lg bg-[var(--club-primary)] text-[var(--club-text-on-primary)] font-bold text-base disabled:opacity-60"
           >
             {checkingOut
               ? "Starting checkout…"

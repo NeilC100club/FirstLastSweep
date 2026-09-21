@@ -1,6 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { STANDARD_TERMS } from "@/lib/types";
+import { standardTerms, clubThemeStyle, DEFAULT_CLUB, type Club } from "@/lib/types";
 import MinuteBoard from "./MinuteBoard";
 import OrganizerControls from "./OrganizerControls";
 
@@ -11,8 +11,13 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: sweep } = await supabase.from("sweeps").select("*").eq("id", params.id).single();
+  const { data: sweep } = await supabase
+    .from("sweeps")
+    .select("*, club:clubs(*)")
+    .eq("id", params.id)
+    .single();
   if (!sweep) notFound();
+  const club: Club = (sweep as unknown as { club: Club | null }).club || DEFAULT_CLUB;
 
   const { data: minutes } = await supabase
     .from("minutes")
@@ -31,7 +36,7 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
   const isOrganizer = user.id === sweep.organizer_id;
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" style={clubThemeStyle(club)}>
       <div className="max-w-4xl mx-auto px-5 py-6 pb-20">
         <a href="/dashboard" className="text-sm text-chalk/60 mb-4 inline-block">
           ← All sweeps
@@ -40,9 +45,9 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-4 mb-5">
           <div className="min-w-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="First and Last" className="h-12 w-auto mb-1" />
-            <div className="font-mono text-[10px] tracking-widest text-gold font-bold mb-2">
-              NEWPORT COUNTY 100 CLUB
+            <img src={club.logo_url || "/logo.png"} alt={club.short_name} className="h-12 w-auto mb-1" />
+            <div className="font-mono text-[10px] tracking-widest text-[var(--club-primary)] font-bold mb-2">
+              {club.short_name.toUpperCase()} {club.fundraiser_name.toUpperCase()}
             </div>
             <h1 className="font-display text-2xl sm:text-3xl mb-2 leading-tight">{sweep.name}</h1>
             <div className="text-sm text-chalk/60 leading-relaxed">
@@ -54,10 +59,12 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
               minute
             </div>
           </div>
-          <div className="w-full sm:w-auto text-left sm:text-right bg-gold/10 border border-gold/30 rounded-xl px-5 py-3.5 sm:min-w-[150px] flex sm:block justify-between items-center">
+          <div className="w-full sm:w-auto text-left sm:text-right bg-[rgb(var(--club-primary-rgb)/10%)] border border-[rgb(var(--club-primary-rgb)/30%)] rounded-xl px-5 py-3.5 sm:min-w-[150px] flex sm:block justify-between items-center">
             <div>
               <div className="font-mono text-[11px] text-chalk/60 tracking-wide">Prize pool</div>
-              <div className="font-display text-3xl text-gold leading-tight">£{prizePool.toFixed(2)}</div>
+              <div className="font-display text-3xl text-[var(--club-primary)] leading-tight">
+                £{prizePool.toFixed(2)}
+              </div>
             </div>
             <div className="text-xs text-chalk/50">
               {claimedCount} / {sweep.total_minutes} claimed
@@ -75,19 +82,20 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
         <div className="bg-chalk/5 border border-chalk/10 rounded-xl p-4 mb-5">
           <div className="font-mono text-[11px] text-chalk/50 tracking-wide mb-2">STANDARD TERMS</div>
           <ul className="list-disc pl-4 space-y-1 text-xs text-chalk/75">
-            {STANDARD_TERMS.map((t) => (
+            {standardTerms(club.fundraiser_name).map((t) => (
               <li key={t}>{t}</li>
             ))}
           </ul>
         </div>
 
         {sweep.status === "finished" && (sweep.goal_minute_first || sweep.goal_minute_last) && (
-          <div className="bg-gold/10 border border-gold/30 rounded-xl p-4 mb-5 space-y-2">
+          <div className="bg-[rgb(var(--club-primary-rgb)/10%)] border border-[rgb(var(--club-primary-rgb)/30%)] rounded-xl p-4 mb-5 space-y-2">
             {sweep.goal_minute_first && (
               <ResultRow
                 label="First goal"
                 minute={sweep.goal_minute_first}
                 owner={minutes?.find((m) => m.minute === sweep.goal_minute_first)?.owner_name}
+                fundraiserName={club.fundraiser_name}
               />
             )}
             {sweep.goal_minute_last && (
@@ -95,6 +103,7 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
                 label="Last goal"
                 minute={sweep.goal_minute_last}
                 owner={minutes?.find((m) => m.minute === sweep.goal_minute_last)?.owner_name}
+                fundraiserName={club.fundraiser_name}
               />
             )}
           </div>
@@ -102,6 +111,7 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
 
         <MinuteBoard
           sweep={sweep}
+          club={club}
           minutes={minutes || []}
           currentUserId={user.id}
           organizerStripeOnboarded={!!organizerProfile?.stripe_onboarded}
@@ -113,7 +123,7 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
             <OrganizerControls sweep={sweep} />
             <a
               href={`/sweeps/${sweep.id}/buyers`}
-              className="text-sm text-gold hover:underline"
+              className="text-sm text-[var(--club-primary)] hover:underline"
             >
               View buyers & contact details →
             </a>
@@ -124,14 +134,24 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
   );
 }
 
-function ResultRow({ label, minute, owner }: { label: string; minute: number; owner?: string | null }) {
+function ResultRow({
+  label,
+  minute,
+  owner,
+  fundraiserName,
+}: {
+  label: string;
+  minute: number;
+  owner?: string | null;
+  fundraiserName: string;
+}) {
   return (
     <div className="flex justify-between text-sm">
       <span className="text-chalk/70">
         {label} — minute {minute}
       </span>
-      <span className={`font-bold ${owner ? "text-gold" : "text-chalk/50"}`}>
-        {owner ? `${owner} wins` : "Unclaimed — goes to the 100 CLUB"}
+      <span className={`font-bold ${owner ? "text-[var(--club-primary)]" : "text-chalk/50"}`}>
+        {owner ? `${owner} wins` : `Unclaimed — goes to the ${fundraiserName}`}
       </span>
     </div>
   );
