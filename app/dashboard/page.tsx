@@ -69,10 +69,18 @@ export default async function DashboardPage() {
 
         <div className="bg-pitch border border-chalk/10 rounded-2xl p-5 mb-7">
           <div className="font-mono text-xs tracking-widest text-chalk/50 mb-2">HOW IT WORKS</div>
-          <p className="text-sm text-chalk/80 leading-relaxed mb-3">
-            Each sweep splits a match into its 90 minutes. Buy the minute you fancy — if a goal
-            goes in during that minute, you're in the money. Half of everything collected forms
-            the prize pot; the other half goes straight to that sweep's club fund.
+          <p className="text-sm text-black leading-relaxed mb-3">
+            Each sweep splits a match into its 90 minutes. Buy the minute you fancy — if the first
+            or last match goal goes in during that minute, you're in the money. Half of everything
+            collected forms the prize pot, split between whoever holds the first goal's minute and
+            whoever holds the last goal's minute; the other half goes straight to that sweep's
+            club fund.
+          </p>
+          <p className="text-sm text-black leading-relaxed mb-3">
+            For example: if 84 minutes are sold, the person holding the first goal's minute gets
+            £42 and the person holding the last goal's minute gets £42 — the other £84 goes to the
+            club fundraiser. If the score finishes 1-0, that same minute is both the first and last
+            goal, so that lucky winner takes the full £84.
           </p>
           <ul className="list-disc pl-4 space-y-1 text-xs text-chalk/70">
             {standardTerms().map((t) => (
