@@ -23,7 +23,9 @@ export async function sendPurchaseConfirmation({
   fundraiserName = "100 Club",
   accentColor = "#C9A227",
   textOnAccent = "#241C00",
+  paidCash = false,
 }: {
+  paidCash?: boolean;
   to: string;
   buyerName: string;
   sweepName: string;
@@ -42,7 +44,7 @@ export async function sendPurchaseConfirmation({
     return;
   }
 
-  const total = ((minutes.length * pricePerMinute) / 100).toFixed(2);
+  const total = ((minutes.length * pricePerMinute) / 100).toFixed(2) + (paidCash ? " (cash)" : "");
   const minuteList = minutes.slice().sort((a, b) => a - b).join(", ");
   const when = [eventDate, kickoffTime ? `${kickoffTime.slice(0, 5)} kickoff` : null]
     .filter(Boolean)
@@ -106,4 +108,90 @@ ${clubName} ${fundraiserName}`;
     // Never let an email failure block the purchase itself — just log it.
     console.error("Email: failed to send confirmation", err);
   }
+}
+
+// Sent to every buyer once the board closes at kick-off: the full board as a PDF.
+export async function sendBoardPdf({
+  to,
+  sweepName,
+  eventDate,
+  kickoffTime,
+  pdf,
+  fileName,
+  sweepUrl,
+  clubName = "Newport County",
+  fundraiserName = "100 Club",
+  accentColor = "#C9A227",
+  textOnAccent = "#241C00",
+}: {
+  to: string[];
+  sweepName: string;
+  eventDate: string | null;
+  kickoffTime: string | null;
+  pdf: Buffer;
+  fileName: string;
+  sweepUrl: string;
+  clubName?: string;
+  fundraiserName?: string;
+  accentColor?: string;
+  textOnAccent?: string;
+}): Promise<{ configured: boolean; sent: number; failed: number }> {
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    console.error("Email: GMAIL_USER or GMAIL_APP_PASSWORD not set — skipping board PDF");
+    return { configured: false, sent: 0, failed: 0 };
+  }
+
+  const when = [eventDate, kickoffTime ? `${kickoffTime.slice(0, 5)} kickoff` : null]
+    .filter(Boolean)
+    .join(" · ");
+  const subject = `The board is locked — ${sweepName}`;
+  const text = `Hi,
+
+The board for ${sweepName}${when ? ` (${when})` : ""} is now locked for kick-off. The full list of who has which minute is attached as a PDF.
+
+You can follow the board live here:
+${sweepUrl}
+
+Good luck!
+${clubName} ${fundraiserName}`;
+
+  const html = `
+    <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; color: #173620;">
+      <div style="background: ${accentColor}; color: ${textOnAccent}; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="margin: 0; font-size: 20px;">The board is locked ⚽</h1>
+      </div>
+      <div style="background: #ffffff; padding: 24px; border: 1px solid #eee; border-top: none; border-radius: 0 0 12px 12px;">
+        <p>The board for <strong>${sweepName}</strong>${when ? ` (${when})` : ""} is now locked for kick-off.</p>
+        <p>The full list of who has which minute is attached as a PDF.</p>
+        <div style="text-align: center; margin: 24px 0 8px;">
+          <a href="${sweepUrl}" style="background: ${accentColor}; color: ${textOnAccent}; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">Follow the board live</a>
+        </div>
+        <p style="text-align: center; font-size: 12px; color: #999; margin-top: 20px;">Good luck! — ${clubName} ${fundraiserName}</p>
+      </div>
+    </div>
+  `;
+
+  // One email per buyer, so nobody sees anyone else's email address. A failure
+  // for one address is logged and skipped — it never stops the others.
+  const transporter = getTransporter();
+  let sent = 0;
+  let failed = 0;
+  for (const address of to) {
+    try {
+      await transporter.sendMail({
+        from: `"${clubName} ${fundraiserName}" <${process.env.GMAIL_USER}>`,
+        to: address,
+        subject,
+        text,
+        html,
+        attachments: [{ filename: fileName, content: pdf, contentType: "application/pdf" }],
+      });
+      sent += 1;
+    } catch (err) {
+      failed += 1;
+      console.error("Email: failed to send board PDF to", address, err);
+    }
+  }
+  console.log("Email: board PDF sent", { sent, failed });
+  return { configured: true, sent, failed };
 }

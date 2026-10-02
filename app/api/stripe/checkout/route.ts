@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
+import { kickoffPassed } from "@/lib/types";
 
 export async function POST(request: Request) {
   const supabase = createClient();
@@ -15,8 +16,11 @@ export async function POST(request: Request) {
   }
 
   const { data: sweep } = await supabase.from("sweeps").select("*").eq("id", sweepId).single();
-  if (!sweep || sweep.status !== "open") {
+  if (!sweep || sweep.status !== "open" || sweep.archived_at) {
     return NextResponse.json({ error: "This sweep isn't open for purchases." }, { status: 400 });
+  }
+  if (kickoffPassed(sweep)) {
+    return NextResponse.json({ error: "Sorry — this board closed at kick-off." }, { status: 400 });
   }
 
   // Re-check nobody else has taken these minutes in the meantime — the unique constraint

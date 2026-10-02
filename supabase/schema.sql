@@ -141,3 +141,8 @@ on conflict (short_name) do nothing;
 -- nothing on an existing deployment loses its branding.
 update sweeps set club_id = (select id from clubs where short_name = 'Newport County' limit 1)
 where club_id is null;
+
+-- ---------------------------------------------------------------------------
+-- Later upgrades live in their own files — run them after this one, in order:
+--   supabase/2026-10-upgrade.sql  (super user, cash minutes, auto-close, archiving)
+-- ---------------------------------------------------------------------------

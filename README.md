@@ -127,3 +127,23 @@ supabase/schema.sql            — run this once in Supabase's SQL editor
   converted to pounds for display.
 - A minute can never be double-sold: the database has a hard uniqueness rule on
   (sweep, minute), on top of the webhook only writing when nobody already owns it.
+
+---
+
+## Super user, cash minutes, auto-close (October 2026)
+
+1. **Database:** run `supabase/2026-10-upgrade.sql` once in the Supabase SQL editor.
+   Do this *before* deploying the new code.
+2. **Make yourself super user:** in the SQL editor run
+   `insert into admins (user_id) select id from auth.users where email = 'YOUR-LOGIN-EMAIL' on conflict do nothing;`
+3. **Vercel:** add an environment variable `CRON_SECRET` (any long random string) and redeploy.
+4. **Auto-close schedule:** open `supabase/2026-10-kickoff-schedule.sql`, paste the same
+   `CRON_SECRET` value where it says `PASTE-CRON-SECRET-HERE`, and run it in the SQL editor.
+   Every minute Supabase pings `/api/cron/kickoff`, which locks any board whose kick-off has
+   passed and emails the board PDF to every buyer with an email address.
+
+What the super user gets: write names onto any board for cash payments (no Stripe), edit any
+board's details, lock boards / enter results on any board, see every buyers list, and remove
+(archive) boards from the dashboard. Archived boards keep all their records and can be restored
+from **View removed boards** on the dashboard. Organisers get the same cash and edit tools on
+their own boards.

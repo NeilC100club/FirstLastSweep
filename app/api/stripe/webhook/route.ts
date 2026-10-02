@@ -49,6 +49,7 @@ export async function POST(request: Request) {
           owner_name: ownerName,
           owner_id: ownerId || null,
           buyer_email: buyerEmail,
+          payment_method: "card",
           stripe_checkout_session_id: session.id,
           purchased_at: new Date().toISOString(),
         })

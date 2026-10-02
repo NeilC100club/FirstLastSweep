@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { clubThemeStyle, DEFAULT_CLUB, type Club } from "@/lib/types";
+import { isAdmin } from "@/lib/admin";
 
 export default async function BuyersPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
@@ -15,7 +16,7 @@ export default async function BuyersPage({ params }: { params: { id: string } })
     .eq("id", params.id)
     .single();
   if (!sweep) notFound();
-  if (sweep.organizer_id !== user.id) redirect(`/sweeps/${params.id}`);
+  if (sweep.organizer_id !== user.id && !(await isAdmin(supabase, user.id))) redirect(`/sweeps/${params.id}`);
   const club: Club = (sweep as unknown as { club: Club | null }).club || DEFAULT_CLUB;
 
   const { data: minutes } = await supabase
@@ -28,10 +29,10 @@ export default async function BuyersPage({ params }: { params: { id: string } })
   // Group by buyer (name + email) so someone who bought several minutes shows as one row.
     const byBuyer = new Map<
     string,
-    { name: string; email: string | null; minuteList: number[]; total: number }
+    { name: string; email: string | null; minuteList: number[]; total: number; cash: boolean }
   >();
   (minutes || []).forEach((m) => {
-    const key = `${m.owner_name}::${m.buyer_email || ""}`;
+    const key = `${m.owner_name}::${m.buyer_email || ""}::${m.payment_method === "cash" ? "cash" : "card"}`;
     const existing = byBuyer.get(key);
     if (existing) {
       existing.minuteList.push(m.minute);
@@ -42,6 +43,7 @@ export default async function BuyersPage({ params }: { params: { id: string } })
         email: m.buyer_email,
         minuteList: [m.minute],
         total: sweep.price_per_minute,
+        cash: m.payment_method === "cash",
       });
     }
   });
@@ -50,6 +52,8 @@ export default async function BuyersPage({ params }: { params: { id: string } })
   const totalCollected = (minutes || []).length * sweep.price_per_minute;
   const prizePot = totalCollected / 2;
   const clubPot = totalCollected / 2;
+  const cashCollected =
+    (minutes || []).filter((m) => m.payment_method === "cash").length * sweep.price_per_minute;
 
   return (
     <div className="min-h-screen" style={clubThemeStyle(club)}>
@@ -70,6 +74,13 @@ export default async function BuyersPage({ params }: { params: { id: string } })
           <SummaryCard label={`${club.fundraiser_name} (50%)`} value={`£${(clubPot / 100).toFixed(2)}`} />
         </div>
 
+        {cashCollected > 0 && (
+          <p className="text-xs text-chalk/60 -mt-3 mb-6">
+            Of that, £{(cashCollected / 100).toFixed(2)} was paid in cash and £
+            {((totalCollected - cashCollected) / 100).toFixed(2)} by card through Stripe.
+          </p>
+        )}
+
         <div className="bg-pitch border border-chalk/10 rounded-2xl overflow-hidden">
           {buyers.length === 0 ? (
             <p className="text-chalk/60 text-sm p-6">No minutes bought yet.</p>
@@ -86,7 +97,14 @@ export default async function BuyersPage({ params }: { params: { id: string } })
               <tbody>
                 {buyers.map((b, i) => (
                   <tr key={i} className="border-b border-chalk/5 last:border-0">
-                    <td className="p-4 font-semibold">{b.name}</td>
+                    <td className="p-4 font-semibold">
+                      {b.name}
+                      {b.cash && (
+                        <span className="ml-2 font-mono text-[9px] tracking-wider px-1.5 py-0.5 rounded bg-chalk/10 text-chalk/60 align-middle">
+                          CASH
+                        </span>
+                      )}
+                    </td>
                     <td className="p-4 text-chalk/70">
                       {b.email ? (
                         <a href={`mailto:${b.email}`} className="text-[var(--club-primary)] hover:underline">

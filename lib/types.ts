@@ -40,6 +40,8 @@ export type Sweep = {
   status: SweepStatus;
   goal_minute_first: number | null;
   goal_minute_last: number | null;
+  archived_at: string | null;
+  board_emailed_at: string | null;
   created_at: string;
 };
 
@@ -52,7 +54,57 @@ export type Minute = {
   buyer_email: string | null;
   stripe_checkout_session_id: string | null;
   purchased_at: string | null;
+  payment_method: "card" | "cash" | null;
+  allocated_by: string | null;
 };
+
+// The board is shown in sections: first half (1-45), second half (46-90) and,
+// for the rare board with more than 90 minutes, extra time (91+).
+export type BoardSection<T extends { minute: number }> = { label: string; range: string; items: T[] };
+
+export function boardSections<T extends { minute: number }>(items: T[]): BoardSection<T>[] {
+  const sections = [
+    { label: "First half", from: 1, to: 45 },
+    { label: "Second half", from: 46, to: 90 },
+    { label: "Extra time", from: 91, to: Infinity },
+  ];
+  return sections
+    .map((s) => {
+      const inSection = items.filter((i) => i.minute >= s.from && i.minute <= s.to);
+      const last = inSection.length ? inSection[inSection.length - 1].minute : s.from;
+      return { label: s.label, range: `Minutes ${s.from}–${last}`, items: inSection };
+    })
+    .filter((s) => s.items.length > 0);
+}
+
+// Kick-off is entered as a UK date + time. This turns it into a real moment in
+// time (handling BST/GMT), so we can tell whether the board should be closed.
+export function kickoffInstant(eventDate: string | null, kickoffTime: string | null): Date | null {
+  if (!eventDate || !kickoffTime) return null;
+  const [y, mo, d] = eventDate.split("-").map(Number);
+  const [h, mi] = kickoffTime.split(":").map(Number);
+  if ([y, mo, d, h, mi].some((n) => Number.isNaN(n))) return null;
+  // Start by pretending the UK time is UTC, then correct by the UK offset at that moment.
+  const asUtc = Date.UTC(y, mo - 1, d, h, mi);
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(asUtc));
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+  const londonAsUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"));
+  const offset = londonAsUtc - asUtc; // 0 in winter, 1 hour in summer
+  return new Date(asUtc - offset);
+}
+
+export function kickoffPassed(sweep: Pick<Sweep, "event_date" | "kickoff_time">, now = new Date()): boolean {
+  const k = kickoffInstant(sweep.event_date, sweep.kickoff_time);
+  return !!k && k.getTime() <= now.getTime();
+}
 
 // The standard terms are the same for every club — only what the fundraising
 // pot is called changes (e.g. Newport County's "100 Club" vs GVD's "Club Fund").

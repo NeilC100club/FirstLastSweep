@@ -168,6 +168,10 @@ export default function NewSweepPage() {
               />
             </div>
           </div>
+          <p className="text-xs text-chalk/40 -mt-1">
+            The board closes automatically at kick-off (UK time) and everyone who bought gets the
+            board as a PDF. You can change these later if they&apos;re wrong.
+          </p>
         </fieldset>
 
         <div className="h-px bg-chalk/10 my-6" />

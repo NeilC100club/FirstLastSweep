@@ -1,8 +1,10 @@
 import { redirect, notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { standardTerms, clubThemeStyle, DEFAULT_CLUB, type Club } from "@/lib/types";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { standardTerms, clubThemeStyle, kickoffPassed, DEFAULT_CLUB, type Club, type Sweep } from "@/lib/types";
+import { isAdmin } from "@/lib/admin";
 import MinuteBoard from "./MinuteBoard";
 import OrganizerControls from "./OrganizerControls";
+import EditSweepDetails from "./EditSweepDetails";
 
 export default async function SweepPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
@@ -11,12 +13,22 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: sweep } = await supabase
+  const { data: sweepRow } = await supabase
     .from("sweeps")
     .select("*, club:clubs(*)")
     .eq("id", params.id)
     .single();
-  if (!sweep) notFound();
+  if (!sweepRow) notFound();
+  const admin = await isAdmin(supabase, user.id);
+  if (sweepRow.archived_at && !admin) notFound();
+
+  // Close the board the moment kick-off passes, even before the every-minute job
+  // gets to it — nobody should see it as open after kick-off.
+  let sweep = sweepRow as Sweep & { club: Club | null };
+  if (sweep.status === "open" && kickoffPassed(sweep)) {
+    await createServiceClient().from("sweeps").update({ status: "locked" }).eq("id", sweep.id).eq("status", "open");
+    sweep = { ...sweep, status: "locked" };
+  }
   const club: Club = (sweep as unknown as { club: Club | null }).club || DEFAULT_CLUB;
 
   const { data: minutes } = await supabase
@@ -33,7 +45,7 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
 
   const claimedCount = (minutes || []).filter((m) => m.owner_name).length;
   const prizePool = (claimedCount * sweep.price_per_minute) / 100;
-  const isOrganizer = user.id === sweep.organizer_id;
+  const canManage = admin || user.id === sweep.organizer_id;
 
   return (
     <div className="min-h-screen" style={clubThemeStyle(club)}>
@@ -41,6 +53,12 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
         <a href="/dashboard" className="text-sm text-chalk/60 mb-4 inline-block">
           ← All sweeps
         </a>
+
+        {sweep.archived_at && (
+          <div className="rounded-xl border border-red/30 bg-red/10 px-4 py-3 mb-4 text-sm">
+            <strong>Archived</strong> — this board is hidden from the dashboard. Only super users can see it.
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-4 mb-5">
           <div className="min-w-0">
@@ -114,19 +132,26 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
           club={club}
           minutes={minutes || []}
           currentUserId={user.id}
+          canAllocate={canManage && sweep.status !== "finished"}
           organizerStripeOnboarded={!!organizerProfile?.stripe_onboarded}
           organizerName={organizerProfile?.name}
         />
 
-        {isOrganizer && (
-          <div className="flex flex-wrap items-center gap-4 mt-4">
-            <OrganizerControls sweep={sweep} />
-            <a
-              href={`/sweeps/${sweep.id}/buyers`}
-              className="text-sm text-[var(--club-primary)] hover:underline"
-            >
-              View buyers & contact details →
-            </a>
+        {canManage && (
+          <div className="mt-6 pt-5 border-t border-chalk/10">
+            <div className="font-mono text-[11px] tracking-widest text-chalk/50 mb-1">
+              {admin ? "SUPER USER" : "ORGANISER"}
+            </div>
+            <div className="flex flex-wrap items-start gap-4">
+              <OrganizerControls sweep={sweep} isAdmin={admin} />
+              <EditSweepDetails sweep={sweep} />
+              <a
+                href={`/sweeps/${sweep.id}/buyers`}
+                className="mt-4 py-3 text-sm text-[var(--club-primary)] hover:underline"
+              >
+                View buyers & contact details →
+              </a>
+            </div>
           </div>
         )}
       </div>

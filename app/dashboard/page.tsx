@@ -2,21 +2,34 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { standardTerms, type Sweep, type Club } from "@/lib/types";
+import { isAdmin } from "@/lib/admin";
 import SignOutButton from "./SignOutButton";
 
 type SweepWithClub = Sweep & { club: Club | null };
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: { archived?: string };
+}) {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: sweeps } = await supabase
+  const admin = await isAdmin(supabase, user.id);
+  // Removed (archived) boards are hidden; a super user can view them with ?archived=1.
+  const showArchived = admin && searchParams.archived === "1";
+
+  let sweepsQuery = supabase
     .from("sweeps")
     .select("*, club:clubs(short_name, primary_color, text_on_primary)")
     .order("created_at", { ascending: false });
+  sweepsQuery = showArchived
+    ? sweepsQuery.not("archived_at", "is", null)
+    : sweepsQuery.is("archived_at", null);
+  const { data: sweeps } = await sweepsQuery;
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -51,6 +64,11 @@ export default async function DashboardPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {admin && (
+            <span className="font-mono text-[10px] tracking-widest px-2.5 py-1.5 rounded-full bg-gold text-[#241C00] font-bold">
+              SUPER USER
+            </span>
+          )}
           <span className="font-mono text-xs px-3 py-1.5 rounded-full bg-chalk/10">{profile?.name}</span>
           <SignOutButton />
         </div>
@@ -91,8 +109,20 @@ export default async function DashboardPage() {
 
         <div className="flex items-end justify-between flex-wrap gap-4 mb-7">
           <div>
-            <div className="font-mono text-xs tracking-widest text-chalk/50 mb-1">YOUR SWEEPS</div>
-            <h1 className="font-display text-2xl">Kick off a new one, or jump back in.</h1>
+            <div className="font-mono text-xs tracking-widest text-chalk/50 mb-1">
+              {showArchived ? "REMOVED BOARDS" : "YOUR SWEEPS"}
+            </div>
+            <h1 className="font-display text-2xl">
+              {showArchived ? "Open one to restore it." : "Kick off a new one, or jump back in."}
+            </h1>
+            {admin && (
+              <Link
+                href={showArchived ? "/dashboard" : "/dashboard?archived=1"}
+                className="inline-block mt-1 text-xs text-chalk/60 underline"
+              >
+                {showArchived ? "← Back to current boards" : "View removed boards"}
+              </Link>
+            )}
           </div>
           <Link
             href="/sweeps/new"
@@ -159,7 +189,7 @@ export default async function DashboardPage() {
           })}
           {(!sweeps || sweeps.length === 0) && (
             <p className="text-chalk/60 text-sm col-span-2">
-              No sweeps yet — create your first one above.
+              {showArchived ? "No removed boards." : "No sweeps yet — create your first one above."}
             </p>
           )}
         </div>

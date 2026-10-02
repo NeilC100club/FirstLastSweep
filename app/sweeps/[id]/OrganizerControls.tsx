@@ -5,7 +5,75 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Sweep } from "@/lib/types";
 
-export default function OrganizerControls({ sweep }: { sweep: Sweep }) {
+export default function OrganizerControls({ sweep, isAdmin = false }: { sweep: Sweep; isAdmin?: boolean }) {
+  return (
+    <>
+      <StatusControls sweep={sweep} />
+      {isAdmin && <ArchiveControl sweep={sweep} />}
+    </>
+  );
+}
+
+// Super user only: hide a board from the dashboard (or bring it back). Nothing is
+// deleted, so buyer records and amounts are always kept.
+function ArchiveControl({ sweep }: { sweep: Sweep }) {
+  const router = useRouter();
+  const [working, setWorking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function archive() {
+    const warning =
+      sweep.status === "finished"
+        ? `Remove "${sweep.name}" from the dashboard? The records are kept and you can restore it later.`
+        : `"${sweep.name}" hasn't finished yet. Remove it from the dashboard anyway? You can restore it later.`;
+    if (!window.confirm(warning)) return;
+    setWorking(true);
+    const res = await fetch(`/api/sweeps/${sweep.id}`, { method: "DELETE" });
+    setWorking(false);
+    if (!res.ok) {
+      setError((await res.json()).error || "Couldn't remove the board.");
+      return;
+    }
+    router.push("/dashboard");
+    router.refresh();
+  }
+
+  async function restore() {
+    setWorking(true);
+    const res = await fetch(`/api/sweeps/${sweep.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ restore: true }),
+    });
+    setWorking(false);
+    if (!res.ok) {
+      setError((await res.json()).error || "Couldn't restore the board.");
+      return;
+    }
+    router.refresh();
+  }
+
+  return (
+    <div className="mt-4">
+      {sweep.archived_at ? (
+        <button onClick={restore} disabled={working} className="px-5 py-3 rounded-lg border border-chalk/15 text-sm disabled:opacity-60">
+          {working ? "Restoring…" : "Restore board"}
+        </button>
+      ) : (
+        <button
+          onClick={archive}
+          disabled={working}
+          className="px-5 py-3 rounded-lg border border-red/40 text-red text-sm disabled:opacity-60"
+        >
+          {working ? "Removing…" : "Remove board"}
+        </button>
+      )}
+      {error && <p className="text-red text-xs mt-2">{error}</p>}
+    </div>
+  );
+}
+
+function StatusControls({ sweep }: { sweep: Sweep }) {
   const router = useRouter();
   const supabase = createClient();
   const [showResultForm, setShowResultForm] = useState(false);
@@ -15,8 +83,10 @@ export default function OrganizerControls({ sweep }: { sweep: Sweep }) {
   const [saving, setSaving] = useState(false);
 
   async function lockBoard() {
+    if (!window.confirm("Lock the board now? Nobody will be able to buy after this, and everyone who bought gets the board PDF by email.")) return;
     setSaving(true);
-    await supabase.from("sweeps").update({ status: "locked" }).eq("id", sweep.id);
+    // Done on the server so the PDF email goes out to buyers straight away.
+    await fetch(`/api/sweeps/${sweep.id}/lock`, { method: "POST" });
     setSaving(false);
     router.refresh();
   }
@@ -45,7 +115,7 @@ export default function OrganizerControls({ sweep }: { sweep: Sweep }) {
           disabled={saving}
           className="px-5 py-3 rounded-lg border border-chalk/15 text-sm"
         >
-          {saving ? "Locking…" : "Lock board & kick off"}
+          {saving ? "Locking…" : "Lock board now"}
         </button>
       </div>
     );
