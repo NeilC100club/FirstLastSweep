@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -11,6 +11,12 @@ export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // Keeps the club link they arrived on (e.g. /c/gvd) as they move between sign in and sign up.
+  const [next, setNext] = useState("");
+  useEffect(() => {
+    setNext(new URLSearchParams(window.location.search).get("next") || "");
+  }, []);
+  const nextQuery = next ? `?next=${encodeURIComponent(next)}` : "";
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [checkEmail, setCheckEmail] = useState(false);
@@ -41,6 +47,9 @@ export default function SignupPage() {
           <p className="text-chalk/70 text-sm">
             We've sent a confirmation link to {email}. Click it, then come back and sign in.
           </p>
+          <Link href={`/login${nextQuery}`} className="inline-block mt-4 text-gold font-semibold">
+            Sign in →
+          </Link>
         </div>
       </div>
     );
@@ -99,7 +108,7 @@ export default function SignupPage() {
 
         <p className="text-sm text-chalk/60 mt-6">
           Already have an account?{" "}
-          <Link href="/login" className="text-gold font-semibold">
+          <Link href={`/login${nextQuery}`} className="text-gold font-semibold">
             Sign in
           </Link>
         </p>

@@ -13,7 +13,6 @@ export default function MinuteBoard({
   minutes,
   currentUserId,
   canAllocate = false,
-  organizerStripeOnboarded,
   organizerName,
 }: {
   canAllocate?: boolean;
@@ -21,7 +20,7 @@ export default function MinuteBoard({
   club?: Club;
   minutes: Minute[];
   currentUserId: string;
-  organizerStripeOnboarded: boolean;
+  organizerStripeOnboarded?: boolean; // no longer used — all payments go to the main account
   organizerName?: string | null;
 }) {
   const router = useRouter();
@@ -139,10 +138,6 @@ export default function MinuteBoard({
 
   async function startCheckout() {
     setError(null);
-    if (!organizerStripeOnboarded) {
-      setError("This sweep's organiser hasn't finished setting up payouts yet — check back soon.");
-      return;
-    }
     setCheckingOut(true);
     const res = await fetch("/api/stripe/checkout", {
       method: "POST",

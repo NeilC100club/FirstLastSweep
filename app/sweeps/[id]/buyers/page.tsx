@@ -1,7 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { clubThemeStyle, DEFAULT_CLUB, type Club } from "@/lib/types";
-import { isAdmin } from "@/lib/admin";
+import { canManageSweep } from "@/lib/admin";
 
 export default async function BuyersPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
@@ -16,7 +16,7 @@ export default async function BuyersPage({ params }: { params: { id: string } })
     .eq("id", params.id)
     .single();
   if (!sweep) notFound();
-  if (sweep.organizer_id !== user.id && !(await isAdmin(supabase, user.id))) redirect(`/sweeps/${params.id}`);
+  if (!(await canManageSweep(supabase, user.id, sweep)).allowed) redirect(`/sweeps/${params.id}`);
   const club: Club = (sweep as unknown as { club: Club | null }).club || DEFAULT_CLUB;
 
   const { data: minutes } = await supabase

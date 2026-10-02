@@ -20,12 +20,33 @@ export default function NewSweepPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const [notOrganiser, setNotOrganiser] = useState(false);
+
+  // Only the clubs this person has been appointed to (a super user sees every club).
   useEffect(() => {
-    supabase
-      .from("clubs")
-      .select("*")
-      .order("name", { ascending: true })
-      .then(({ data }) => setClubs(data || []));
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const [{ data: adminRow }, { data: organised }] = await Promise.all([
+        supabase.from("admins").select("user_id").eq("user_id", user.id).maybeSingle(),
+        supabase.from("club_organisers").select("club_id").eq("user_id", user.id),
+      ]);
+      let query = supabase.from("clubs").select("*").order("name", { ascending: true });
+      if (!adminRow) {
+        const ids = (organised || []).map((r: { club_id: string }) => r.club_id);
+        if (ids.length === 0) {
+          setNotOrganiser(true);
+          return;
+        }
+        query = query.in("id", ids);
+      }
+      const { data } = await query;
+      const list = (data || []) as Club[];
+      setClubs(list);
+      if (list.length === 1) setClubId(list[0].id);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -88,6 +109,23 @@ export default function NewSweepPage() {
     }
 
     router.push(`/sweeps/${sweep.id}`);
+  }
+
+  if (notOrganiser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-5">
+        <div className="w-full max-w-md bg-pitch border border-chalk/10 rounded-2xl p-8 text-center">
+          <h1 className="font-display text-2xl mb-3">Organisers only</h1>
+          <p className="text-chalk/70 text-sm mb-4">
+            Only appointed club organisers can set up sweeps. If you&apos;d like to run sweeps for your club, get in
+            touch with us at firstandlastsweep@gmail.com.
+          </p>
+          <a href="/dashboard" className="text-gold font-semibold">
+            ← Back
+          </a>
+        </div>
+      </div>
+    );
   }
 
   return (

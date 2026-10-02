@@ -147,3 +147,15 @@ board's details, lock boards / enter results on any board, see every buyers list
 (archive) boards from the dashboard. Archived boards keep all their records and can be restored
 from **View removed boards** on the dashboard. Organisers get the same cash and edit tools on
 their own boards.
+
+## Clubs & organisers (October 2026)
+
+Run `supabase/2026-10-club-organisers.sql` once in the Supabase SQL editor.
+
+- **All card payments go to the main Stripe account** (the one whose keys are in Vercel). Organisers
+  don't connect Stripe; the super user pays winners and each club its share.
+- **Super user → Clubs & organisers** (`/admin`): add a club with its badge, colours, fundraiser name
+  and link (`/c/<link>`), and appoint organisers by their login email (they sign up first).
+- **Organisers** only see and run their own club's boards, in the club's colours.
+- **Buyers** use the club link. The app remembers their club, so their dashboard always opens on
+  their club's page with its badge.

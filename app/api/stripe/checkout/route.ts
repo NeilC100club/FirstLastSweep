@@ -38,19 +38,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: organizerProfile } = await supabase
-    .from("profiles")
-    .select("stripe_account_id, stripe_onboarded")
-    .eq("id", sweep.organizer_id)
-    .single();
-
-  if (!organizerProfile?.stripe_account_id || !organizerProfile.stripe_onboarded) {
-    return NextResponse.json(
-      { error: "This sweep's organiser hasn't finished setting up payouts yet." },
-      { status: 400 }
-    );
-  }
-
   const { data: profile } = await supabase.from("profiles").select("name").eq("id", user.id).single();
   // @ts-expect-error - managed_payments isn't in this Stripe SDK version's types yet
   const session = await stripe.checkout.sessions.create({
@@ -68,9 +55,8 @@ export async function POST(request: Request) {
         quantity: minutes.length,
       },
     ],
-    payment_intent_data: {
-      transfer_data: { destination: organizerProfile.stripe_account_id },
-    },
+    // All payments land in the main Stripe account; the super user settles up with
+    // each club and pays the winners.
     metadata: {
       sweepId,
       minutes: minutes.join(","),

@@ -6,6 +6,7 @@ export type Club = {
   id: string;
   name: string;
   short_name: string;
+  slug: string | null; // web address of the club's page, e.g. "gvd" → /c/gvd
   fundraiser_name: string; // e.g. "100 Club" or "Club Fund" — what the pot is called
   logo_url: string | null;
   primary_color: string; // main accent — CTAs, prize pool, "yours" swatch
@@ -19,6 +20,7 @@ export const DEFAULT_CLUB: Club = {
   id: "",
   name: "First and Last Sweep",
   short_name: "First and Last Sweep",
+  slug: null,
   fundraiser_name: "club fund",
   logo_url: null,
   primary_color: "#F2A900",

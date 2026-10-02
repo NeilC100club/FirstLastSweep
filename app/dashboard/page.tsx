@@ -1,193 +1,132 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { standardTerms, type Sweep, type Club } from "@/lib/types";
-import { isAdmin } from "@/lib/admin";
-import SignOutButton from "./SignOutButton";
+import { clubThemeStyle, type Club } from "@/lib/types";
+import { getRole } from "@/lib/admin";
+import { claimedCounts, sortForDisplay, type SweepWithClub } from "@/lib/sweeps";
+import AppHeader from "@/components/AppHeader";
+import SweepCard from "@/components/SweepCard";
+import HowItWorks from "@/components/HowItWorks";
 
-type SweepWithClub = Sweep & { club: Club | null };
-
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: { archived?: string };
-}) {
+// One dashboard, three views:
+//  - super user: every club's boards (plus removed boards) and the clubs & organisers screen
+//  - organiser: only the boards for the club(s) they've been appointed to, in that club's colours
+//  - buyer: sent to their own club's page; if we don't know their club yet, they pick one
+export default async function DashboardPage({ searchParams }: { searchParams: { archived?: string } }) {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const admin = await isAdmin(supabase, user.id);
-  // Removed (archived) boards are hidden; a super user can view them with ?archived=1.
-  const showArchived = admin && searchParams.archived === "1";
+  const [role, { data: profile }] = await Promise.all([
+    getRole(supabase, user.id),
+    supabase.from("profiles").select("name, home_club_id").eq("id", user.id).single(),
+  ]);
 
-  let sweepsQuery = supabase
-    .from("sweeps")
-    .select("*, club:clubs(short_name, primary_color, text_on_primary)")
-    .order("created_at", { ascending: false });
-  sweepsQuery = showArchived
-    ? sweepsQuery.not("archived_at", "is", null)
-    : sweepsQuery.is("archived_at", null);
-  const { data: sweeps } = await sweepsQuery;
+  // ---- Buyers --------------------------------------------------------------
+  if (!role.isOrganiser) {
+    if (profile?.home_club_id) {
+      const { data: home } = await supabase.from("clubs").select("slug").eq("id", profile.home_club_id).maybeSingle();
+      if (home?.slug) redirect(`/c/${home.slug}`);
+    }
+    const { data: clubs } = await supabase.from("clubs").select("*").order("name");
+    return (
+      <div className="min-h-screen">
+        <AppHeader name={profile?.name} />
+        <div className="max-w-3xl mx-auto px-5 py-8">
+          <h1 className="font-display text-2xl mb-1">Which club are you here for?</h1>
+          <p className="text-sm text-chalk/60 mb-6">Pick your club to see its sweeps.</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(clubs || []).map((c: Club) => (
+              <Link
+                key={c.id}
+                href={`/c/${c.slug}`}
+                className="flex items-center gap-4 rounded-2xl p-4 border border-chalk/10"
+                style={{ backgroundColor: c.primary_color, color: c.text_on_primary }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={c.logo_url || "/logo.png"} alt="" className="h-12 w-auto" />
+                <div>
+                  <div className="font-display text-lg leading-tight">{c.name}</div>
+                  <div className="text-xs opacity-75">{c.fundraiser_name}</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("name, stripe_onboarded")
-    .eq("id", user.id)
-    .single();
+  // ---- Organisers and the super user --------------------------------------
+  const showArchived = role.admin && searchParams.archived === "1";
 
-  // Claimed-count per sweep, for the progress bar.
-  const claimedCounts: Record<string, number> = {};
-  if (sweeps && sweeps.length > 0) {
-    const { data: minuteRows } = await supabase
-      .from("minutes")
-      .select("sweep_id")
-      .not("owner_name", "is", null)
-      .in(
-        "sweep_id",
-        sweeps.map((s: SweepWithClub) => s.id)
-      );
-    (minuteRows || []).forEach((row: { sweep_id: string }) => {
-      claimedCounts[row.sweep_id] = (claimedCounts[row.sweep_id] || 0) + 1;
-    });
+  let query = supabase.from("sweeps").select("*, club:clubs(*)").order("created_at", { ascending: false });
+  query = showArchived ? query.not("archived_at", "is", null) : query.is("archived_at", null);
+  if (!role.admin) query = query.in("club_id", role.clubIds);
+  const { data } = await query;
+  const sweeps = sortForDisplay((data || []) as SweepWithClub[]);
+  const counts = await claimedCounts(
+    supabase,
+    sweeps.map((s) => s.id)
+  );
+
+  // An organiser who runs exactly one club gets that club's badge and colours throughout.
+  let club: Club | null = null;
+  if (!role.admin && role.clubIds.length === 1) {
+    const { data: c } = await supabase.from("clubs").select("*").eq("id", role.clubIds[0]).maybeSingle();
+    club = (c as Club) || null;
   }
 
   return (
-    <div className="min-h-screen">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-chalk/10 bg-pitch">
-        <div className="flex items-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="First and Last" className="h-8 w-auto" />
-          <div className="leading-tight">
-            <div className="font-mono text-xs tracking-widest font-bold">FIRST AND LAST GOAL SWEEP</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          {admin && (
-            <span className="font-mono text-[10px] tracking-widest px-2.5 py-1.5 rounded-full bg-gold text-[#241C00] font-bold">
-              SUPER USER
-            </span>
-          )}
-          <span className="font-mono text-xs px-3 py-1.5 rounded-full bg-chalk/10">{profile?.name}</span>
-          <SignOutButton />
-        </div>
-      </div>
+    <div className="min-h-screen" style={club ? clubThemeStyle(club) : undefined}>
+      <AppHeader club={club} name={profile?.name} admin={role.admin} />
 
       <div className="max-w-4xl mx-auto px-5 py-6 pb-20">
-        {!profile?.stripe_onboarded && (
-          <Link
-            href="/api/stripe/connect"
-            className="block mb-6 rounded-xl border border-gold/30 bg-gold/10 px-5 py-4 text-sm"
-          >
-            <strong className="text-gold">Set up payouts</strong> — connect a bank account so you
-            can collect money for any sweep you organise. Takes a couple of minutes via Stripe.
-          </Link>
-        )}
-
-        <div className="bg-pitch border border-chalk/10 rounded-2xl p-5 mb-7">
-          <div className="font-mono text-xs tracking-widest text-chalk/50 mb-2">HOW IT WORKS</div>
-          <p className="text-sm text-black leading-relaxed mb-3">
-            Each sweep splits a match into its 90 minutes. Buy the minute you fancy — if the first
-            or last match goal goes in during that minute, you're in the money. Half of everything
-            collected forms the prize pot, split between whoever holds the first goal's minute and
-            whoever holds the last goal's minute; the other half goes straight to that sweep's
-            club fund.
-          </p>
-          <p className="text-sm text-black leading-relaxed mb-3">
-            For example: if 84 minutes are sold, the person holding the first goal's minute gets
-            £42 and the person holding the last goal's minute gets £42 — the other £84 goes to the
-            club fundraiser. If the score finishes 1-0, that same minute is both the first and last
-            goal, so that lucky winner takes the full £84.
-          </p>
-          <ul className="list-disc pl-4 space-y-1 text-xs text-chalk/70">
-            {standardTerms().map((t) => (
-              <li key={t}>{t}</li>
-            ))}
-          </ul>
-        </div>
+        <HowItWorks fundraiserName={club?.fundraiser_name} />
 
         <div className="flex items-end justify-between flex-wrap gap-4 mb-7">
           <div>
             <div className="font-mono text-xs tracking-widest text-chalk/50 mb-1">
-              {showArchived ? "REMOVED BOARDS" : "YOUR SWEEPS"}
+              {showArchived ? "REMOVED BOARDS" : role.admin ? "ALL CLUBS" : club ? club.name.toUpperCase() : "YOUR CLUBS"}
             </div>
             <h1 className="font-display text-2xl">
               {showArchived ? "Open one to restore it." : "Kick off a new one, or jump back in."}
             </h1>
-            {admin && (
-              <Link
-                href={showArchived ? "/dashboard" : "/dashboard?archived=1"}
-                className="inline-block mt-1 text-xs text-chalk/60 underline"
-              >
-                {showArchived ? "← Back to current boards" : "View removed boards"}
-              </Link>
+            {role.admin && (
+              <div className="flex gap-4 mt-1">
+                <Link
+                  href={showArchived ? "/dashboard" : "/dashboard?archived=1"}
+                  className="text-xs text-chalk/60 underline"
+                >
+                  {showArchived ? "← Back to current boards" : "View removed boards"}
+                </Link>
+                <Link href="/admin" className="text-xs text-chalk/60 underline">
+                  Clubs & organisers
+                </Link>
+              </div>
             )}
           </div>
-          <Link
-            href="/sweeps/new"
-            className="px-5 py-3 rounded-lg bg-gold text-[#241C00] font-bold text-sm"
-          >
-            + New sweep
-          </Link>
+          {!showArchived && (
+            <Link
+              href="/sweeps/new"
+              className="px-5 py-3 rounded-lg font-bold text-sm"
+              style={{
+                backgroundColor: club?.primary_color || "#F2A900",
+                color: club?.text_on_primary || "#241C00",
+              }}
+            >
+              + New sweep
+            </Link>
+          )}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          {(sweeps || []).map((s: SweepWithClub) => {
-            const claimed = claimedCounts[s.id] || 0;
-            const pct = Math.round((claimed / s.total_minutes) * 100);
-            const isFinished = s.status === "finished";
-            const clubColor = s.club?.primary_color || "#F2A900";
-            return (
-              <Link
-                key={s.id}
-                href={`/sweeps/${s.id}`}
-                className="relative block bg-pitch border border-chalk/10 rounded-2xl p-5 overflow-hidden"
-              >
-                {isFinished && (
-                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1.5 bg-chalk/70">
-                    <span className="text-white text-6xl font-black leading-none" aria-hidden="true">
-                      ✕
-                    </span>
-                    <span className="font-mono text-base sm:text-lg font-extrabold tracking-widest text-white">
-                      FINISHED
-                    </span>
-                  </div>
-                )}
-                <div className={isFinished ? "opacity-30 grayscale" : ""}>
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className="font-mono text-[10px] tracking-wide px-2 py-1 rounded-full"
-                        style={{ backgroundColor: `${clubColor}26`, color: clubColor }}
-                      >
-                        {s.status.toUpperCase()}
-                      </span>
-                      {s.club?.short_name && (
-                        <span className="font-mono text-[10px] tracking-wide px-2 py-1 rounded-full bg-chalk/10 text-chalk/60">
-                          {s.club.short_name}
-                        </span>
-                      )}
-                    </div>
-                    <span className="font-mono text-xs" style={{ color: clubColor }}>
-                      £{(s.price_per_minute / 100).toFixed(2)}/min
-                    </span>
-                  </div>
-                  <h3 className="font-display text-lg mb-1">{s.name}</h3>
-                  <div className="text-xs text-chalk/60 mb-3">
-                    {s.event_date} {s.kickoff_time ? `· ${s.kickoff_time.slice(0, 5)} kickoff` : ""}
-                  </div>
-                  <div className="h-1.5 rounded bg-chalk/10 overflow-hidden mb-2">
-                    <div className="h-full" style={{ width: `${pct}%`, backgroundColor: clubColor }} />
-                  </div>
-                  <div className="text-xs text-chalk/60">
-                    {claimed} / {s.total_minutes} minutes claimed
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-          {(!sweeps || sweeps.length === 0) && (
+          {sweeps.map((s) => (
+            <SweepCard key={s.id} sweep={s} claimed={counts[s.id] || 0} showClub={!club} />
+          ))}
+          {sweeps.length === 0 && (
             <p className="text-chalk/60 text-sm col-span-2">
               {showArchived ? "No removed boards." : "No sweeps yet — create your first one above."}
             </p>

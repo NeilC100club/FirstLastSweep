@@ -1,7 +1,8 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { standardTerms, clubThemeStyle, kickoffPassed, DEFAULT_CLUB, type Club, type Sweep } from "@/lib/types";
-import { isAdmin } from "@/lib/admin";
+import { getRole } from "@/lib/admin";
+import AppHeader from "@/components/AppHeader";
 import MinuteBoard from "./MinuteBoard";
 import OrganizerControls from "./OrganizerControls";
 import EditSweepDetails from "./EditSweepDetails";
@@ -19,7 +20,8 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
     .eq("id", params.id)
     .single();
   if (!sweepRow) notFound();
-  const admin = await isAdmin(supabase, user.id);
+  const role = await getRole(supabase, user.id);
+  const admin = role.admin;
   if (sweepRow.archived_at && !admin) notFound();
 
   // Close the board the moment kick-off passes, even before the every-minute job
@@ -45,13 +47,18 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
 
   const claimedCount = (minutes || []).filter((m) => m.owner_name).length;
   const prizePool = (claimedCount * sweep.price_per_minute) / 100;
-  const canManage = admin || user.id === sweep.organizer_id;
+  const canManage =
+    admin || user.id === sweep.organizer_id || (!!sweep.club_id && role.clubIds.includes(sweep.club_id));
 
   return (
     <div className="min-h-screen" style={clubThemeStyle(club)}>
+      <AppHeader club={club.id ? club : null} admin={admin} />
       <div className="max-w-4xl mx-auto px-5 py-6 pb-20">
-        <a href="/dashboard" className="text-sm text-chalk/60 mb-4 inline-block">
-          ← All sweeps
+        <a
+          href={!role.isOrganiser && club.slug ? `/c/${club.slug}` : "/dashboard"}
+          className="text-sm text-chalk/60 mb-4 inline-block"
+        >
+          ← All {role.isOrganiser ? "" : `${club.short_name} `}sweeps
         </a>
 
         {sweep.archived_at && (
@@ -62,11 +69,6 @@ export default async function SweepPage({ params }: { params: { id: string } }) 
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-4 mb-5">
           <div className="min-w-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={club.logo_url || "/logo.png"} alt={club.short_name} className="h-12 w-auto mb-1" />
-            <div className="font-mono text-[10px] tracking-widest text-[var(--club-primary)] font-bold mb-2">
-              {club.short_name.toUpperCase()} {club.fundraiser_name.toUpperCase()}
-            </div>
             <h1 className="font-display text-2xl sm:text-3xl mb-2 leading-tight">{sweep.name}</h1>
             <div className="text-sm text-chalk/60 leading-relaxed">
               {sweep.event_date}

@@ -145,4 +145,6 @@ where club_id is null;
 -- ---------------------------------------------------------------------------
 -- Later upgrades live in their own files — run them after this one, in order:
 --   supabase/2026-10-upgrade.sql  (super user, cash minutes, auto-close, archiving)
+--   supabase/2026-10-kickoff-schedule.sql  (every-minute kick-off job — fill in CRON_SECRET)
+--   supabase/2026-10-club-organisers.sql  (club organisers, club pages, payments to main account)
 -- ---------------------------------------------------------------------------
