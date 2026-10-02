@@ -34,10 +34,15 @@ function clean(body: ClubInput) {
   };
 }
 
-function friendly(message: string) {
-  if (message.includes("slug")) return "Another club already uses that web address — choose a different one.";
-  if (message.includes("short_name")) return "Another club already uses that short name.";
-  return message;
+function friendly(error: { code?: string; message: string }) {
+  // 23505 = a duplicate of something that must be unique.
+  if (error.code === "23505" && error.message.includes("slug"))
+    return "Another club already uses that web address — choose a different one.";
+  if (error.code === "23505" && error.message.includes("short_name"))
+    return "Another club already uses that short name.";
+  if (error.message.includes("slug"))
+    return "The database hasn't been updated for club links yet — run the club organisers SQL in Supabase first.";
+  return error.message;
 }
 
 // Add a club.
@@ -47,7 +52,7 @@ export async function POST(request: Request) {
   const result = clean((await request.json()) as ClubInput);
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
   const { data, error } = await auth.service.from("clubs").insert(result.row).select().single();
-  if (error) return NextResponse.json({ error: friendly(error.message) }, { status: 400 });
+  if (error) return NextResponse.json({ error: friendly(error) }, { status: 400 });
   return NextResponse.json({ club: data });
 }
 
@@ -60,6 +65,6 @@ export async function PATCH(request: Request) {
   const result = clean(body);
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
   const { error } = await auth.service.from("clubs").update(result.row).eq("id", body.id);
-  if (error) return NextResponse.json({ error: friendly(error.message) }, { status: 400 });
+  if (error) return NextResponse.json({ error: friendly(error) }, { status: 400 });
   return NextResponse.json({ ok: true });
 }
