@@ -1,4 +1,4 @@
-import { jsPDF } from "jspdf";
+import { SimplePdf } from "@/lib/simplePdf";
 import { createServiceClient } from "@/lib/supabase/server";
 import { buildBoardPdf, boardPdfFileName } from "@/lib/boardPdf";
 import { sendBoardPdf } from "@/lib/email";
@@ -6,7 +6,7 @@ import type { Club, Minute, Sweep } from "@/lib/types";
 
 // Server-only. Locks every open board whose kick-off has passed, then emails the
 // board PDF for every locked board that hasn't had it sent yet.
-export async function runKickoffJob(): Promise<{ locked: string[]; emailed: string[] }> {
+export async function runKickoffJob(): Promise<{ locked: string[]; emailed: string[]; errors: string[] }> {
   const supabase = createServiceClient();
 
   const { data: lockedRows, error } = await supabase.rpc("lock_due_sweeps");
@@ -23,10 +23,13 @@ export async function runKickoffJob(): Promise<{ locked: string[]; emailed: stri
     .is("archived_at", null);
 
   const emailed: string[] = [];
+  const errors: string[] = [];
   for (const row of pending || []) {
-    if (await emailBoardToBuyers(row.id)) emailed.push(row.id);
+    const outcome = await emailBoardToBuyers(row.id);
+    if (outcome === true) emailed.push(row.id);
+    else if (typeof outcome === "string") errors.push(`${row.id}: ${outcome}`);
   }
-  return { locked, emailed };
+  return { locked, emailed, errors };
 }
 
 // Locks one board right now (the organiser's "Lock board" button) and sends the PDF.
@@ -37,17 +40,19 @@ export async function lockBoardNow(sweepId: string): Promise<void> {
 }
 
 // Emails the board PDF to every distinct buyer email on the board, at most once per board.
-export async function emailBoardToBuyers(sweepId: string): Promise<boolean> {
+// Returns true when sent, false when there was nothing to do, or a message saying what went wrong.
+export async function emailBoardToBuyers(sweepId: string): Promise<boolean | string> {
   const supabase = createServiceClient();
 
   // Claim the job first, so two runs at the same moment can never both send it.
-  const { data: claimed } = await supabase
+  const { data: claimed, error: claimError } = await supabase
     .from("sweeps")
     .update({ board_emailed_at: new Date().toISOString() })
     .eq("id", sweepId)
     .is("board_emailed_at", null)
     .select("*, club:clubs(*)")
     .maybeSingle();
+  if (claimError) return `couldn't mark the board as emailed: ${claimError.message}`;
   if (!claimed) return false;
 
   const sweep = claimed as Sweep & { club: Club | null };
@@ -74,7 +79,8 @@ export async function emailBoardToBuyers(sweepId: string): Promise<boolean> {
     );
 
     const fundraiserName = sweep.club?.fundraiser_name || "club fund";
-    const doc = buildBoardPdf(jsPDF, {
+    const doc = new SimplePdf();
+    buildBoardPdf(doc, {
       sweep,
       minutes,
       fundraiserName,
@@ -96,15 +102,16 @@ export async function emailBoardToBuyers(sweepId: string): Promise<boolean> {
       textOnAccent: sweep.club?.text_on_primary,
     });
 
-    // If email isn't set up at all, release the claim so it's retried once it is.
-    if (!result.configured) {
+    // If email isn't set up, or every single send failed, release the claim so the
+    // next run (a minute later) tries again.
+    if (!result.configured || (result.sent === 0 && result.failed > 0)) {
       await supabase.from("sweeps").update({ board_emailed_at: null }).eq("id", sweepId);
-      return false;
+      return result.configured ? "every email failed to send — check the Gmail app password" : "Gmail isn't set up in Vercel";
     }
     return true;
   } catch (err) {
     console.error("Kickoff: failed to build or send board PDF", sweepId, err);
     await supabase.from("sweeps").update({ board_emailed_at: null }).eq("id", sweepId);
-    return false;
+    return err instanceof Error ? err.message : String(err);
   }
 }

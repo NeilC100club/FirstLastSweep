@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { jsPDF } from "jspdf";
+import { SimplePdf } from "@/lib/simplePdf";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { canManageSweep } from "@/lib/admin";
 import { buildBoardPdf, boardPdfFileName } from "@/lib/boardPdf";
@@ -60,9 +60,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
       )
     );
     const fundraiserName = sweep.club?.fundraiser_name || "club fund";
-    const pdf = Buffer.from(
-      buildBoardPdf(jsPDF, { sweep, minutes, fundraiserName, organizerName: organizer?.name }).output("arraybuffer")
-    );
+    const doc = new SimplePdf();
+    buildBoardPdf(doc, { sweep, minutes, fundraiserName, organizerName: organizer?.name });
+    const pdf = Buffer.from(doc.output("arraybuffer"));
     const sent = await sendResults({
       to: recipients,
       sweepName: sweep.name,

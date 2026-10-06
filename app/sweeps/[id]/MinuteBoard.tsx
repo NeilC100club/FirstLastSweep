@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Club, Minute, Sweep } from "@/lib/types";
 import { DEFAULT_CLUB, boardSections } from "@/lib/types";
-import { buildBoardPdf, boardPdfFileName } from "@/lib/boardPdf";
+import { buildBoardPdf, boardPdfFileName, type PdfDoc } from "@/lib/boardPdf";
 
 export default function MinuteBoard({
   sweep,
@@ -40,7 +40,8 @@ export default function MinuteBoard({
     setExportingPdf(true);
     try {
       const { jsPDF } = await import("jspdf");
-      const doc = buildBoardPdf(jsPDF, {
+      const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+      buildBoardPdf(doc as unknown as PdfDoc, {
         sweep,
         minutes,
         fundraiserName: club.fundraiser_name,

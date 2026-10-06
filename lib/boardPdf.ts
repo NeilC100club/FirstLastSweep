@@ -1,11 +1,22 @@
-import type { jsPDF as JsPDF } from "jspdf";
 import { boardSections, type Minute, type Sweep } from "@/lib/types";
 
-// Builds the board PDF. Shared by the "Download PDF" button (in the browser) and
-// the kick-off email (on the server), so both always show exactly the same thing.
-// The caller passes in the jsPDF class, so the browser can load it lazily.
+// The handful of drawing calls the board needs. Both jsPDF (used in the browser for
+// "Download PDF") and our own SimplePdf (used on the server for emails) provide them.
+export interface PdfDoc {
+  internal: { pageSize: { getWidth(): number; getHeight(): number } };
+  setFont(family: string, style?: string): unknown;
+  setFontSize(size: number): unknown;
+  setTextColor(r: number, g: number, b: number): unknown;
+  text(text: string, x: number, y: number, options?: { maxWidth?: number }): unknown;
+  getTextWidth(text: string): number;
+  addPage(): unknown;
+}
+
+// Draws the board onto a blank A4 document (points, portrait). Shared by the
+// "Download PDF" button (in the browser) and the kick-off and results emails (on
+// the server), so they always match.
 export function buildBoardPdf(
-  JsPDFClass: typeof JsPDF,
+  doc: PdfDoc,
   {
     sweep,
     minutes,
@@ -20,8 +31,7 @@ export function buildBoardPdf(
     fundraiserName: string;
     organizerName?: string | null;
   }
-): JsPDF {
-  const doc = new JsPDFClass({ orientation: "portrait", unit: "pt", format: "a4" });
+): void {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 40;
@@ -135,7 +145,6 @@ export function buildBoardPdf(
     y = maxY + 30;
   }
 
-  return doc;
 }
 
 export function boardPdfFileName(sweepName: string): string {
