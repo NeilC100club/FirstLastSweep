@@ -25,7 +25,7 @@ export default function SignupPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { name } },
@@ -35,7 +35,14 @@ export default function SignupPage() {
       setError(error.message);
       return;
     }
-    // If email confirmation is on (default in Supabase), there's no session yet.
+    // With "Confirm email" switched off in Supabase they're signed in straight away,
+    // so take them into the app (or back to the club link they came from).
+    if (data.session) {
+      router.push(next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard");
+      router.refresh();
+      return;
+    }
+    // Otherwise Supabase has emailed them a confirmation link first.
     setCheckEmail(true);
   }
 
