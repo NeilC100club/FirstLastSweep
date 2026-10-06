@@ -4,6 +4,8 @@ import { runKickoffJob } from "@/lib/closeBoards";
 // Called every minute by a Supabase scheduled job (see supabase/2026-10-kickoff-schedule.sql).
 // Locks any board whose kick-off has passed and emails its PDF to everyone who bought.
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
 export const maxDuration = 60;
 
 export async function GET(request: Request) {
