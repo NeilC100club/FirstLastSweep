@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import type { Sweep } from "@/lib/types";
 
 export default function OrganizerControls({ sweep, isAdmin = false }: { sweep: Sweep; isAdmin?: boolean }) {
@@ -75,12 +74,12 @@ function ArchiveControl({ sweep }: { sweep: Sweep }) {
 
 function StatusControls({ sweep }: { sweep: Sweep }) {
   const router = useRouter();
-  const supabase = createClient();
   const [showResultForm, setShowResultForm] = useState(false);
   const [firstMin, setFirstMin] = useState("");
   const [lastMin, setLastMin] = useState("");
   const [noGoals, setNoGoals] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [resultError, setResultError] = useState<string | null>(null);
 
   async function lockBoard() {
     if (!window.confirm("Lock the board now? Nobody will be able to buy after this, and everyone who bought gets the board PDF by email.")) return;
@@ -93,16 +92,25 @@ function StatusControls({ sweep }: { sweep: Sweep }) {
 
   async function submitResult(e: React.FormEvent) {
     e.preventDefault();
+    const first = noGoals || firstMin === "" ? null : Number(firstMin);
+    const last = noGoals || lastMin === "" ? null : Number(lastMin);
+    const summary = noGoals
+      ? "0-0, no goals"
+      : `first goal minute ${first ?? "none"}, last goal minute ${last ?? "none"}`;
+    if (!window.confirm(`Confirm the result: ${summary}?\n\nThis finishes the sweep and emails the result to everyone who bought with an email address. It can't be undone.`)) return;
     setSaving(true);
-    await supabase
-      .from("sweeps")
-      .update({
-        goal_minute_first: noGoals || firstMin === "" ? null : Number(firstMin),
-        goal_minute_last: noGoals || lastMin === "" ? null : Number(lastMin),
-        status: "finished",
-      })
-      .eq("id", sweep.id);
+    setResultError(null);
+    const res = await fetch(`/api/sweeps/${sweep.id}/result`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ first, last }),
+    });
+    const data = await res.json();
     setSaving(false);
+    if (!res.ok) {
+      setResultError(data.error || "Couldn't save the result — try again.");
+      return;
+    }
     setShowResultForm(false);
     router.refresh();
   }
@@ -182,6 +190,11 @@ function StatusControls({ sweep }: { sweep: Sweep }) {
                 className="w-full px-4 py-3 rounded-lg bg-chalk/5 border border-chalk/15 text-chalk disabled:opacity-50"
               />
             </div>
+
+            <p className="text-xs text-chalk/50">
+              Everyone who bought with an email address gets the result and the final board by email.
+            </p>
+            {resultError && <p className="text-red text-sm">{resultError}</p>}
 
             <div className="flex justify-end gap-3">
               <button
